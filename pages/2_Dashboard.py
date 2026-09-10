@@ -1,7 +1,8 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_entries_dataframe
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit
+from models import EnergySource
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
 st.title("📊 Energy Cost Dashboard")
@@ -14,10 +15,10 @@ if "active_business_id" not in st.session_state:
 
 business_id = st.session_state.active_business_id
 df = get_entries_dataframe(session, business_id)
-session.close()
 
 if df.empty:
     st.info("No entries logged yet. Head to 'Log Entry' to add your first one.")
+    session.close()
 else:
     total_cost = df["cost"].sum()
     cost_by_source = df.groupby("source")["cost"].sum()
@@ -26,5 +27,104 @@ else:
     col1.metric("Total Cost", f"${total_cost:,.2f}")
     col2.metric("Entries Logged", len(df))
     col3.metric("Sources Used", df["source"].nunique())
+    st.subheader("Cost Efficiency by Source")
+    cost_per_unit = get_cost_per_unit(session, business_id)
+    eff_col1, eff_col2, eff_col3 = st.columns(3)
+    for col, source in zip([eff_col1, eff_col2, eff_col3], ["grid", "generator", "solar"]):
+        data = cost_per_unit[source]
+        if data["value"] is not None:
+            col.metric(f"{source.capitalize()} — {data['metric']}", f"${data['value']:.3f}")
+        else:
+            col.metric(f"{source.capitalize()} — {data['metric']}", "No data")
 
     st.subheader("Cost by Source")
+    st.bar_chart(cost_by_source)
+
+    st.subheader("Cost Over Time")
+    cost_by_date = df.groupby("date")["cost"].sum()
+    st.line_chart(cost_by_date)
+
+    st.subheader("All Entries")
+    st.dataframe(df, use_container_width=True)
+
+    st.subheader("Edit or Delete an Entry")
+
+    entry_options = {
+        row["id"]: f"{row['date']} - {row['source']} - ${row['cost']:.2f}"
+        for _, row in df.iterrows()
+    }
+    selected_entry_id = st.selectbox(
+        "Select an entry",
+        options=list(entry_options.keys()),
+        format_func=lambda eid: entry_options[eid],
+    )
+
+    selected_row = df[df["id"] == selected_entry_id].iloc[0]
+
+    edit_source = st.selectbox(
+        "Energy Source",
+        options=[s.value for s in EnergySource],
+        index=[s.value for s in EnergySource].index(selected_row["source"]),
+    )
+    edit_date = st.date_input("Date", value=selected_row["date"])
+    edit_cost = st.number_input("Cost ($)", min_value=0.0, step=0.5, value=float(selected_row["cost"]))
+
+    edit_units_kwh = None
+    edit_diesel_liters = None
+    edit_hours_run = None
+
+    if edit_source in ("grid", "solar"):
+        edit_units_kwh = st.number_input(
+            "Units Consumed (kWh)", min_value=0.0, step=1.0,
+            value=float(selected_row["units_kwh"]) if selected_row["units_kwh"] else 0.0,
+        )
+
+    if edit_source == "generator":
+        edit_diesel_liters = st.number_input(
+            "Diesel Used (liters)", min_value=0.0, step=1.0,
+            value=float(selected_row["diesel_liters"]) if selected_row["diesel_liters"] else 0.0,
+        )
+        edit_hours_run = st.number_input(
+            "Hours Run", min_value=0.0, step=0.5,
+            value=float(selected_row["hours_run"]) if selected_row["hours_run"] else 0.0,
+        )
+
+    edit_notes = st.text_area("Notes (optional)", value=selected_row["notes"] or "")
+
+    col_update, col_delete = st.columns(2)
+
+    with col_update:
+        if st.button("Update Entry"):
+            update_energy_entry(
+                session=session,
+                entry_id=selected_entry_id,
+                entry_date=edit_date,
+                source=EnergySource(edit_source),
+                cost=edit_cost,
+                units_kwh=edit_units_kwh,
+                diesel_liters=edit_diesel_liters,
+                hours_run=edit_hours_run,
+                notes=edit_notes if edit_notes else None,
+            )
+            st.success("Entry updated!")
+            st.rerun()
+
+    with col_delete:
+        if st.button("Delete Entry", type="primary"):
+            st.session_state.confirm_delete_id = selected_entry_id
+
+    if st.session_state.get("confirm_delete_id") == selected_entry_id:
+        st.warning("Are you sure you want to delete this entry? This cannot be undone.")
+        col_yes, col_no = st.columns(2)
+        with col_yes:
+            if st.button("Yes, delete it"):
+                delete_energy_entry(session, selected_entry_id)
+                del st.session_state.confirm_delete_id
+                st.success("Entry deleted!")
+                st.rerun()
+        with col_no:
+            if st.button("Cancel"):
+                del st.session_state.confirm_delete_id
+                st.rerun()
+
+    session.close()

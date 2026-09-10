@@ -51,6 +51,7 @@ def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     )
     data = [
         {
+            "id": e.id,
             "date": e.date,
             "source": e.source.value,
             "cost": e.cost,
@@ -108,3 +109,67 @@ def create_business(session: Session, name: str) -> Business:
 
 def get_all_businesses(session: Session) -> list[Business]:
     return session.query(Business).all()
+
+def get_entry_by_id(session: Session, entry_id: int) -> EnergyEntry | None:
+    return session.query(EnergyEntry).filter(EnergyEntry.id == entry_id).first()
+
+
+def update_energy_entry(
+    session: Session,
+    entry_id: int,
+    entry_date,
+    source: EnergySource,
+    cost: float,
+    units_kwh: float | None = None,
+    diesel_liters: float | None = None,
+    hours_run: float | None = None,
+    notes: str | None = None,
+) -> EnergyEntry | None:
+    entry = get_entry_by_id(session, entry_id)
+    if entry is None:
+        return None
+
+    entry.date = entry_date
+    entry.source = source
+    entry.cost = cost
+    entry.units_kwh = units_kwh
+    entry.diesel_liters = diesel_liters
+    entry.hours_run = hours_run
+    entry.notes = notes
+
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
+def delete_energy_entry(session: Session, entry_id: int) -> bool:
+    entry = get_entry_by_id(session, entry_id)
+    if entry is None:
+        return False
+
+    session.delete(entry)
+    session.commit()
+    return True
+def get_cost_per_unit(session: Session, business_id: int) -> dict:
+    summaries = get_all_source_summaries(session, business_id)
+    result = {}
+
+    for source, data in summaries.items():
+        if source in ("grid", "solar"):
+            if data["total_kwh"] > 0:
+                result[source] = {
+                    "metric": "cost per kWh",
+                    "value": round(data["total_cost"] / data["total_kwh"], 3),
+                }
+            else:
+                result[source] = {"metric": "cost per kWh", "value": None}
+        elif source == "generator":
+            if data["total_hours_run"] > 0:
+                result[source] = {
+                    "metric": "cost per hour",
+                    "value": round(data["total_cost"] / data["total_hours_run"], 2),
+                }
+            else:
+                result[source] = {"metric": "cost per hour", "value": None}
+
+    return result
