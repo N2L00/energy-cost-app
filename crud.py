@@ -130,6 +130,7 @@ def create_business(session: Session, name: str) -> Business:
 def get_all_businesses(session: Session) -> list[Business]:
     return session.query(Business).all()
 
+
 def get_business_by_id(session: Session, business_id: int) -> Business | None:
     return session.query(Business).filter(Business.id == business_id).first()
 
@@ -142,6 +143,33 @@ def update_exchange_rate(session: Session, business_id: int, new_rate: float) ->
     session.commit()
     session.refresh(business)
     return business
+
+
+def update_budget_threshold(session: Session, business_id: int, new_threshold: float | None) -> Business | None:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return None
+    business.budget_threshold = new_threshold
+    session.commit()
+    session.refresh(business)
+    return business
+
+
+def get_current_month_spending(session: Session, business_id: int) -> dict:
+    business = get_business_by_id(session, business_id)
+    today = date_type.today()
+    month_start = today.replace(day=1)
+
+    summary = get_cost_summary(session, business_id, start_date=month_start, end_date=today)
+
+    return {
+        "spent": summary["total_cost"],
+        "threshold": business.budget_threshold,
+        "over_budget": (
+            business.budget_threshold is not None
+            and summary["total_cost"] > business.budget_threshold
+        ),
+    }
 
 
 def get_entry_by_id(session: Session, entry_id: int) -> EnergyEntry | None:

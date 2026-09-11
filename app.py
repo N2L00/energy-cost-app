@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate
+from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate, update_budget_threshold
 
 st.set_page_config(page_title="Energy Cost Tracker", page_icon="⚡")
 
@@ -48,6 +48,23 @@ with st.expander("💱 Exchange Rate Settings"):
     if st.button("Update Exchange Rate"):
         update_exchange_rate(session, current_business.id, new_rate)
         st.success("Exchange rate updated!")
+        st.rerun()
+
+with st.expander("🎯 Monthly Budget Alert"):
+    current_threshold = current_business.budget_threshold
+    st.write(
+        f"Current budget: ${current_threshold:,.2f}" if current_threshold
+        else "No budget set."
+    )
+    new_threshold = st.number_input(
+        "Set monthly budget ($)",
+        min_value=0.0,
+        value=float(current_threshold) if current_threshold else 0.0,
+        step=1.0,
+    )
+    if st.button("Update Budget"):
+        update_budget_threshold(session, current_business.id, new_threshold if new_threshold > 0 else None)
+        st.success("Budget updated!")
         st.rerun()
 
 session.close()

@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending
 from models import EnergySource, Currency
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
@@ -27,6 +27,19 @@ else:
     col1.metric("Total Cost", f"${total_cost:,.2f}")
     col2.metric("Entries Logged", len(df))
     col3.metric("Sources Used", df["source"].nunique())
+    budget_info = get_current_month_spending(session, business_id)
+    if budget_info["threshold"] is not None:
+        if budget_info["over_budget"]:
+            st.error(
+                f"⚠️ Over budget: spent ${budget_info['spent']:,.2f} this month, "
+                f"budget is ${budget_info['threshold']:,.2f}"
+            )
+        else:
+            remaining = budget_info["threshold"] - budget_info["spent"]
+            st.success(
+                f"✅ On track: ${budget_info['spent']:,.2f} spent this month, "
+                f"${remaining:,.2f} remaining of your ${budget_info['threshold']:,.2f} budget"
+            )
     total_outage_hours = get_total_outage_hours(session, business_id)
     st.metric("Total Outage Hours", f"{total_outage_hours:.1f}")
 

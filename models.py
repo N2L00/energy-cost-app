@@ -26,6 +26,7 @@ class Business(Base):
     name: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     exchange_rate: Mapped[float] = mapped_column(default=89000.0)
+    budget_threshold: Mapped[Optional[float]] = mapped_column(default=None)
 
     entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business")
 
