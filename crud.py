@@ -5,6 +5,12 @@ from sqlalchemy.orm import Session
 from models import Business, EnergyEntry, EnergySource, Currency, Outage
 
 
+def to_usd(cost: float, currency: Currency, exchange_rate: float) -> float:
+    if currency == Currency.LBP:
+        return cost / exchange_rate
+    return cost
+
+
 def get_or_create_default_business(session: Session) -> Business:
     business = session.query(Business).first()
     if business is None:
@@ -45,6 +51,9 @@ def create_energy_entry(
 
 
 def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
+    business = session.query(Business).filter(Business.id == business_id).first()
+    exchange_rate = business.exchange_rate if business else 89000.0
+
     entries = (
         session.query(EnergyEntry)
         .filter(EnergyEntry.business_id == business_id)
@@ -57,6 +66,7 @@ def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
             "source": e.source.value,
             "currency": e.currency.value,
             "cost": e.cost,
+            "cost_usd": to_usd(e.cost, e.currency, exchange_rate),
             "units_kwh": e.units_kwh,
             "diesel_liters": e.diesel_liters,
             "hours_run": e.hours_run,
@@ -66,6 +76,7 @@ def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     ]
     return pd.DataFrame(data)
 
+
 def get_cost_summary(
     session: Session,
     business_id: int,
@@ -73,6 +84,9 @@ def get_cost_summary(
     start_date: date_type | None = None,
     end_date: date_type | None = None,
 ) -> dict:
+    business = session.query(Business).filter(Business.id == business_id).first()
+    exchange_rate = business.exchange_rate
+
     query = session.query(EnergyEntry).filter(EnergyEntry.business_id == business_id)
 
     if source is not None:
@@ -84,7 +98,7 @@ def get_cost_summary(
 
     entries = query.all()
 
-    total_cost = sum(e.cost for e in entries)
+    total_cost = sum(to_usd(e.cost, e.currency, exchange_rate) for e in entries)
     total_kwh = sum(e.units_kwh or 0 for e in entries)
     total_diesel = sum(e.diesel_liters or 0 for e in entries)
     total_hours = sum(e.hours_run or 0 for e in entries)
@@ -96,11 +110,15 @@ def get_cost_summary(
         "total_diesel_liters": round(total_diesel, 2),
         "total_hours_run": round(total_hours, 2),
     }
+
+
 def get_all_source_summaries(session: Session, business_id: int) -> dict:
     return {
         source.value: get_cost_summary(session, business_id, source=source.value)
         for source in EnergySource
     }
+
+
 def create_business(session: Session, name: str) -> Business:
     business = Business(name=name)
     session.add(business)
@@ -111,6 +129,20 @@ def create_business(session: Session, name: str) -> Business:
 
 def get_all_businesses(session: Session) -> list[Business]:
     return session.query(Business).all()
+
+def get_business_by_id(session: Session, business_id: int) -> Business | None:
+    return session.query(Business).filter(Business.id == business_id).first()
+
+
+def update_exchange_rate(session: Session, business_id: int, new_rate: float) -> Business | None:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return None
+    business.exchange_rate = new_rate
+    session.commit()
+    session.refresh(business)
+    return business
+
 
 def get_entry_by_id(session: Session, entry_id: int) -> EnergyEntry | None:
     return session.query(EnergyEntry).filter(EnergyEntry.id == entry_id).first()
@@ -179,6 +211,7 @@ def get_cost_per_unit(session: Session, business_id: int) -> dict:
                 result[source] = {"metric": "cost per hour", "value": None}
 
     return result
+
 
 def log_outage(session: Session, business_id: int, outage_date, hours_down: float, notes: str | None = None):
     outage = Outage(business_id=business_id, date=outage_date, hours_down=hours_down, notes=notes)

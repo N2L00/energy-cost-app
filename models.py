@@ -25,9 +25,9 @@ class Business(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    exchange_rate: Mapped[float] = mapped_column(default=89000.0)
 
     entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business")
-
 
 class EnergyEntry(Base):
     __tablename__ = "energy_entries"

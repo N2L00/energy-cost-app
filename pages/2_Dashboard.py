@@ -20,8 +20,8 @@ if df.empty:
     st.info("No entries logged yet. Head to 'Log Entry' to add your first one.")
     session.close()
 else:
-    total_cost = df["cost"].sum()
-    cost_by_source = df.groupby("source")["cost"].sum()
+    total_cost = df["cost_usd"].sum()
+    cost_by_source = df.groupby("source")["cost_usd"].sum()
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Cost", f"${total_cost:,.2f}")
@@ -44,7 +44,7 @@ else:
     st.bar_chart(cost_by_source)
 
     st.subheader("Cost Over Time")
-    cost_by_date = df.groupby("date")["cost"].sum()
+    cost_by_date = df.groupby("date")["cost_usd"].sum()
     st.line_chart(cost_by_date)
 
     st.subheader("Outage Hours vs. Generator Cost")
@@ -55,7 +55,7 @@ else:
         st.info("Log both outages and generator entries to see this comparison.")
     else:
         outage_by_date = outages_df.groupby("date")["hours_down"].sum()
-        generator_cost_by_date = generator_df.groupby("date")["cost"].sum()
+        generator_cost_by_date = generator_df.groupby("date")["cost_usd"].sum()
 
         comparison_df = pd.DataFrame({
             "Outage Hours": outage_by_date,

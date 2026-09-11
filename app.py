@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_all_businesses, create_business, get_or_create_default_business
+from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate
 
 st.set_page_config(page_title="Energy Cost Tracker", page_icon="⚡")
 
@@ -34,6 +34,21 @@ with st.expander("➕ Add a new business"):
             st.rerun()
         else:
             st.warning("Please enter a business name.")
+
+current_business = get_business_by_id(session, st.session_state.active_business_id)
+
+with st.expander("💱 Exchange Rate Settings"):
+    st.write(f"Current rate: 1 USD = {current_business.exchange_rate:,.0f} LBP")
+    new_rate = st.number_input(
+        "Update exchange rate (LBP per 1 USD)",
+        min_value=1.0,
+        value=float(current_business.exchange_rate),
+        step=1000.0,
+    )
+    if st.button("Update Exchange Rate"):
+        update_exchange_rate(session, current_business.id, new_rate)
+        st.success("Exchange rate updated!")
+        st.rerun()
 
 session.close()
 
