@@ -14,6 +14,11 @@ class EnergySource(PyEnum):
     SOLAR = "solar"
 
 
+class Currency(PyEnum):
+    USD = "USD"
+    LBP = "LBP"
+
+
 class Business(Base):
     __tablename__ = "businesses"
 
@@ -31,6 +36,7 @@ class EnergyEntry(Base):
     business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
     date: Mapped[date]
     source: Mapped[EnergySource] = mapped_column(Enum(EnergySource))
+    currency: Mapped[Currency] = mapped_column(Enum(Currency), default=Currency.USD)
     cost: Mapped[float]
     units_kwh: Mapped[Optional[float]] = mapped_column(default=None)
     diesel_liters: Mapped[Optional[float]] = mapped_column(default=None)

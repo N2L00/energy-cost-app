@@ -2,7 +2,7 @@ import streamlit as st
 
 from database import SessionLocal
 from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit
-from models import EnergySource
+from models import EnergySource, Currency
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
 st.title("📊 Energy Cost Dashboard")
@@ -27,6 +27,7 @@ else:
     col1.metric("Total Cost", f"${total_cost:,.2f}")
     col2.metric("Entries Logged", len(df))
     col3.metric("Sources Used", df["source"].nunique())
+
     st.subheader("Cost Efficiency by Source")
     cost_per_unit = get_cost_per_unit(session, business_id)
     eff_col1, eff_col2, eff_col3 = st.columns(3)
@@ -67,7 +68,12 @@ else:
         index=[s.value for s in EnergySource].index(selected_row["source"]),
     )
     edit_date = st.date_input("Date", value=selected_row["date"])
-    edit_cost = st.number_input("Cost ($)", min_value=0.0, step=0.5, value=float(selected_row["cost"]))
+    edit_currency = st.selectbox(
+        "Currency",
+        options=["USD", "LBP"],
+        index=["USD", "LBP"].index(selected_row["currency"]),
+    )
+    edit_cost = st.number_input("Cost", min_value=0.0, step=0.5, value=float(selected_row["cost"]))
 
     edit_units_kwh = None
     edit_diesel_liters = None
@@ -101,6 +107,7 @@ else:
                 entry_date=edit_date,
                 source=EnergySource(edit_source),
                 cost=edit_cost,
+                currency=Currency(edit_currency),
                 units_kwh=edit_units_kwh,
                 diesel_liters=edit_diesel_liters,
                 hours_run=edit_hours_run,

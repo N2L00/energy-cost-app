@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from models import EnergySource
+from models import EnergySource, Currency
 from crud import create_energy_entry
 
 st.set_page_config(page_title="Log Entry", page_icon="📝")
@@ -21,7 +21,8 @@ source = st.selectbox(
 )
 
 entry_date = st.date_input("Date")
-cost = st.number_input("Cost ($)", min_value=0.0, step=0.5)
+currency = st.selectbox("Currency", options=["USD", "LBP"])
+cost = st.number_input("Cost", min_value=0.0, step=0.5)
 
 units_kwh = None
 diesel_liters = None
@@ -43,6 +44,7 @@ if st.button("Save Entry"):
         entry_date=entry_date,
         source=EnergySource(source),
         cost=cost,
+        currency=Currency(currency),
         units_kwh=units_kwh,
         diesel_liters=diesel_liters,
         hours_run=hours_run,

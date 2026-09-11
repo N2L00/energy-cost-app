@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import date as date_type
 from sqlalchemy.orm import Session
 
-from models import Business, EnergyEntry, EnergySource
+from models import Business, EnergyEntry, EnergySource, Currency
 
 
 def get_or_create_default_business(session: Session) -> Business:
@@ -21,6 +21,7 @@ def create_energy_entry(
     entry_date,
     source: EnergySource,
     cost: float,
+    currency: Currency = Currency.USD,
     units_kwh: float | None = None,
     diesel_liters: float | None = None,
     hours_run: float | None = None,
@@ -31,6 +32,7 @@ def create_energy_entry(
         date=entry_date,
         source=source,
         cost=cost,
+        currency=currency,
         units_kwh=units_kwh,
         diesel_liters=diesel_liters,
         hours_run=hours_run,
@@ -40,7 +42,6 @@ def create_energy_entry(
     session.commit()
     session.refresh(entry)
     return entry
-
 
 
 def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
@@ -54,6 +55,7 @@ def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
             "id": e.id,
             "date": e.date,
             "source": e.source.value,
+            "currency": e.currency.value,
             "cost": e.cost,
             "units_kwh": e.units_kwh,
             "diesel_liters": e.diesel_liters,
@@ -120,6 +122,7 @@ def update_energy_entry(
     entry_date,
     source: EnergySource,
     cost: float,
+    currency: Currency = Currency.USD,
     units_kwh: float | None = None,
     diesel_liters: float | None = None,
     hours_run: float | None = None,
@@ -132,6 +135,7 @@ def update_energy_entry(
     entry.date = entry_date
     entry.source = source
     entry.cost = cost
+    entry.currency = currency
     entry.units_kwh = units_kwh
     entry.diesel_liters = diesel_liters
     entry.hours_run = hours_run
@@ -150,6 +154,8 @@ def delete_energy_entry(session: Session, entry_id: int) -> bool:
     session.delete(entry)
     session.commit()
     return True
+
+
 def get_cost_per_unit(session: Session, business_id: int) -> dict:
     summaries = get_all_source_summaries(session, business_id)
     result = {}
