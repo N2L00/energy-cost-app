@@ -43,7 +43,7 @@ with st.expander("💱 Exchange Rate Settings"):
         "Update exchange rate (LBP per 1 USD)",
         min_value=1.0,
         value=float(current_business.exchange_rate),
-        step=1000.0,
+        step=1.0,
     )
     if st.button("Update Exchange Rate"):
         update_exchange_rate(session, current_business.id, new_rate)
