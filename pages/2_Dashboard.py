@@ -1,7 +1,7 @@
 import streamlit as st
-
+import pandas as pd
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours
 from models import EnergySource, Currency
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
@@ -27,6 +27,8 @@ else:
     col1.metric("Total Cost", f"${total_cost:,.2f}")
     col2.metric("Entries Logged", len(df))
     col3.metric("Sources Used", df["source"].nunique())
+    total_outage_hours = get_total_outage_hours(session, business_id)
+    st.metric("Total Outage Hours", f"{total_outage_hours:.1f}")
 
     st.subheader("Cost Efficiency by Source")
     cost_per_unit = get_cost_per_unit(session, business_id)
@@ -44,6 +46,23 @@ else:
     st.subheader("Cost Over Time")
     cost_by_date = df.groupby("date")["cost"].sum()
     st.line_chart(cost_by_date)
+
+    st.subheader("Outage Hours vs. Generator Cost")
+    outages_df = get_outages_dataframe(session, business_id)
+    generator_df = df[df["source"] == "generator"]
+
+    if outages_df.empty or generator_df.empty:
+        st.info("Log both outages and generator entries to see this comparison.")
+    else:
+        outage_by_date = outages_df.groupby("date")["hours_down"].sum()
+        generator_cost_by_date = generator_df.groupby("date")["cost"].sum()
+
+        comparison_df = pd.DataFrame({
+            "Outage Hours": outage_by_date,
+            "Generator Cost": generator_cost_by_date,
+        }).fillna(0)
+
+        st.line_chart(comparison_df)
 
     st.subheader("All Entries")
     st.dataframe(df, use_container_width=True)

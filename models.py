@@ -44,3 +44,14 @@ class EnergyEntry(Base):
     notes: Mapped[Optional[str]] = mapped_column(default=None)
 
     business: Mapped["Business"] = relationship(back_populates="entries")
+
+class Outage(Base):
+    __tablename__ = "outages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
+    date: Mapped[date]
+    hours_down: Mapped[float]
+    notes: Mapped[Optional[str]] = mapped_column(default=None)
+
+    business: Mapped["Business"] = relationship()

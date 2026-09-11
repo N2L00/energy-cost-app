@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import date as date_type
 from sqlalchemy.orm import Session
 
-from models import Business, EnergyEntry, EnergySource, Currency
+from models import Business, EnergyEntry, EnergySource, Currency, Outage
 
 
 def get_or_create_default_business(session: Session) -> Business:
@@ -179,3 +179,28 @@ def get_cost_per_unit(session: Session, business_id: int) -> dict:
                 result[source] = {"metric": "cost per hour", "value": None}
 
     return result
+
+def log_outage(session: Session, business_id: int, outage_date, hours_down: float, notes: str | None = None):
+    outage = Outage(business_id=business_id, date=outage_date, hours_down=hours_down, notes=notes)
+    session.add(outage)
+    session.commit()
+    session.refresh(outage)
+    return outage
+
+
+def get_outages_dataframe(session: Session, business_id: int) -> pd.DataFrame:
+    outages = (
+        session.query(Outage)
+        .filter(Outage.business_id == business_id)
+        .all()
+    )
+    data = [
+        {"id": o.id, "date": o.date, "hours_down": o.hours_down, "notes": o.notes}
+        for o in outages
+    ]
+    return pd.DataFrame(data)
+
+
+def get_total_outage_hours(session: Session, business_id: int) -> float:
+    outages = session.query(Outage).filter(Outage.business_id == business_id).all()
+    return round(sum(o.hours_down for o in outages), 2)
