@@ -241,6 +241,24 @@ def get_cost_per_unit(session: Session, business_id: int) -> dict:
     return result
 
 
+def calculate_solar_payback(session: Session, business_id: int, upfront_cost: float, extra_kwh_per_day: float) -> dict:
+    cost_per_unit = get_cost_per_unit(session, business_id)
+    grid_rate = cost_per_unit["grid"]["value"]
+
+    if grid_rate is None or extra_kwh_per_day <= 0:
+        return {"possible": False}
+
+    daily_savings = extra_kwh_per_day * grid_rate
+    monthly_savings = daily_savings * 30
+    months_to_payback = upfront_cost / monthly_savings if monthly_savings > 0 else None
+
+    return {
+        "possible": True,
+        "monthly_savings": round(monthly_savings, 2),
+        "months_to_payback": round(months_to_payback, 1) if months_to_payback else None,
+    }
+
+
 def log_outage(session: Session, business_id: int, outage_date, hours_down: float, notes: str | None = None):
     outage = Outage(business_id=business_id, date=outage_date, hours_down=hours_down, notes=notes)
     session.add(outage)
