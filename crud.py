@@ -259,6 +259,46 @@ def calculate_solar_payback(session: Session, business_id: int, upfront_cost: fl
     }
 
 
+def simulate_savings(
+    session: Session,
+    business_id: int,
+    generator_hours_reduction: float = 0.0,
+    grid_to_solar_kwh_shift: float = 0.0,
+) -> dict:
+    if generator_hours_reduction < 0 or grid_to_solar_kwh_shift < 0:
+        return {"possible": False}
+
+    cost_per_unit = get_cost_per_unit(session, business_id)
+    generator_rate = cost_per_unit.get("generator", {}).get("value")
+    grid_rate = cost_per_unit.get("grid", {}).get("value")
+    solar_rate = cost_per_unit.get("solar", {}).get("value") or 0.0
+
+    generator_daily_savings = 0.0
+    if generator_hours_reduction > 0:
+        if generator_rate is None:
+            return {"possible": False}
+        generator_daily_savings = generator_hours_reduction * generator_rate
+
+    grid_shift_daily_savings = 0.0
+    if grid_to_solar_kwh_shift > 0:
+        if grid_rate is None:
+            return {"possible": False}
+        grid_shift_daily_savings = grid_to_solar_kwh_shift * (grid_rate - solar_rate)
+
+    if generator_hours_reduction == 0 and grid_to_solar_kwh_shift == 0:
+        return {"possible": False}
+
+    total_daily_savings = generator_daily_savings + grid_shift_daily_savings
+
+    return {
+        "possible": True,
+        "generator_daily_savings": round(generator_daily_savings, 2),
+        "grid_shift_daily_savings": round(grid_shift_daily_savings, 2),
+        "total_daily_savings": round(total_daily_savings, 2),
+        "total_monthly_savings": round(total_daily_savings * 30, 2),
+    }
+
+
 def save_recommendation(session: Session, business_id: int, recommendation_text: str):
     rec = Recommendation(business_id=business_id, recommendation_text=recommendation_text)
     session.add(rec)
