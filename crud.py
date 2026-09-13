@@ -216,6 +216,15 @@ def delete_energy_entry(session: Session, entry_id: int) -> bool:
     return True
 
 
+def delete_business(session: Session, business_id: int) -> bool:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return False
+    session.delete(business)
+    session.commit()
+    return True
+
+
 def get_cost_per_unit(session: Session, business_id: int) -> dict:
     summaries = get_all_source_summaries(session, business_id)
     result = {}

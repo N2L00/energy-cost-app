@@ -28,7 +28,9 @@ class Business(Base):
     exchange_rate: Mapped[float] = mapped_column(default=89000.0)
     budget_threshold: Mapped[Optional[float]] = mapped_column(default=None)
 
-    entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business")
+    entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business", cascade="all, delete-orphan")
+    outages: Mapped[list["Outage"]] = relationship(cascade="all, delete-orphan")
+    recommendations: Mapped[list["Recommendation"]] = relationship(cascade="all, delete-orphan")
 
 
 class EnergyEntry(Base):
@@ -57,7 +59,7 @@ class Outage(Base):
     hours_down: Mapped[float]
     notes: Mapped[Optional[str]] = mapped_column(default=None)
 
-    business: Mapped["Business"] = relationship()
+    business: Mapped["Business"] = relationship(overlaps="outages")
 
 
 class Recommendation(Base):
@@ -68,4 +70,4 @@ class Recommendation(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     recommendation_text: Mapped[str]
 
-    business: Mapped["Business"] = relationship()
+    business: Mapped["Business"] = relationship(overlaps="recommendations")

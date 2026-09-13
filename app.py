@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate, update_budget_threshold
+from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business
 
 st.set_page_config(page_title="Energy Cost Tracker", page_icon="⚡")
 
@@ -66,6 +66,29 @@ with st.expander("🎯 Monthly Budget Alert"):
         update_budget_threshold(session, current_business.id, new_threshold if new_threshold > 0 else None)
         st.success("Budget updated!")
         st.rerun()
+
+with st.expander("🗑️ Delete This Business"):
+    st.warning(
+        "This will permanently delete this business and ALL of its energy entries, "
+        "outages, and recommendations. This cannot be undone."
+    )
+    if st.button("Delete Business"):
+        st.session_state.confirm_delete_business_id = current_business.id
+
+    if st.session_state.get("confirm_delete_business_id") == current_business.id:
+        st.error(f"Are you absolutely sure you want to delete '{current_business.name}'?")
+        col_yes, col_no = st.columns(2)
+        with col_yes:
+            if st.button("Yes, delete everything"):
+                delete_business(session, current_business.id)
+                del st.session_state.confirm_delete_business_id
+                del st.session_state.active_business_id
+                st.success("Business deleted.")
+                st.rerun()
+        with col_no:
+            if st.button("Cancel", key="cancel_delete_business"):
+                del st.session_state.confirm_delete_business_id
+                st.rerun()
 
 session.close()
 
