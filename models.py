@@ -31,6 +31,7 @@ class Business(Base):
     entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business", cascade="all, delete-orphan")
     outages: Mapped[list["Outage"]] = relationship(cascade="all, delete-orphan")
     recommendations: Mapped[list["Recommendation"]] = relationship(cascade="all, delete-orphan")
+    outage_schedules: Mapped[list["OutageSchedule"]] = relationship(cascade="all, delete-orphan")
 
 
 class EnergyEntry(Base):
@@ -72,3 +73,13 @@ class Recommendation(Base):
     followed: Mapped[Optional[bool]] = mapped_column(default=None)
 
     business: Mapped["Business"] = relationship(overlaps="recommendations")
+
+class OutageSchedule(Base):
+    __tablename__ = "outage_schedules"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
+    hours_per_day: Mapped[float]
+    active: Mapped[bool] = mapped_column(default=True)
+
+    business: Mapped["Business"] = relationship(overlaps="outage_schedules")
