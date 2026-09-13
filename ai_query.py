@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import anthropic
 
-from crud import get_cost_summary, get_all_source_summaries
+from crud import get_cost_summary, get_all_source_summaries, get_total_outage_hours
 
 load_dotenv()
 
@@ -84,15 +84,16 @@ def ask_energy_question(session, business_id, user_question):
 
 def get_recommendation(session, business_id):
     summaries = get_all_source_summaries(session, business_id)
+    outage_hours = get_total_outage_hours(session, business_id)
 
     prompt = f"""Here is a small business's energy cost data in Lebanon, broken down by source:
 
 Grid: {summaries['grid']}
 Generator: {summaries['generator']}
 Solar: {summaries['solar']}
+Total grid outage hours logged: {outage_hours}
 
-Based on this data, give a short, practical recommendation on how this business could shift its energy usage between sources to reduce costs. Keep it to 3-4 sentences. Respond in plain text only — no Markdown, no bold, no headers, no bullet points."""
-
+Based on this data, give a short, practical recommendation on how this business could reduce energy costs. Consider shifting usage between sources, but also consider whether battery storage makes sense (using the outage hours and generator cost as a guide) and whether a shared generator subscription ("ishtirak") might be cheaper than running their own generator, if the generator cost per hour seems high. Only mention an idea if the numbers actually support it — don't include generic advice that isn't backed by the data given. Keep it to 3-4 sentences. Respond in plain text only — no Markdown, no bold, no headers, no bullet points."""
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
