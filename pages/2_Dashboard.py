@@ -79,6 +79,12 @@ else:
 
     st.subheader("All Entries")
     st.dataframe(df, use_container_width=True)
+    st.download_button(
+        "Download CSV",
+        data=df.to_csv(index=False),
+        file_name="energy_entries.csv",
+        mime="text/csv",
+    )
 
     st.subheader("Edit or Delete an Entry")
 
