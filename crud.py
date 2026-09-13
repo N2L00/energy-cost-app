@@ -1,8 +1,8 @@
 import pandas as pd
-from datetime import date as date_type
+from datetime import date as date_type, timedelta
 from sqlalchemy.orm import Session
 
-from models import Business, EnergyEntry, EnergySource, Currency, Outage
+from models import Business, EnergyEntry, EnergySource, Currency, Outage, Recommendation
 
 
 def to_usd(cost: float, currency: Currency, exchange_rate: float) -> float:
@@ -256,6 +256,69 @@ def calculate_solar_payback(session: Session, business_id: int, upfront_cost: fl
         "possible": True,
         "monthly_savings": round(monthly_savings, 2),
         "months_to_payback": round(months_to_payback, 1) if months_to_payback else None,
+    }
+
+
+def save_recommendation(session: Session, business_id: int, recommendation_text: str):
+    rec = Recommendation(business_id=business_id, recommendation_text=recommendation_text)
+    session.add(rec)
+    session.commit()
+    session.refresh(rec)
+    return rec
+
+
+def get_recommendations_dataframe(session: Session, business_id: int) -> pd.DataFrame:
+    recs = (
+        session.query(Recommendation)
+        .filter(Recommendation.business_id == business_id)
+        .order_by(Recommendation.created_at.desc())
+        .all()
+    )
+    data = [
+        {"id": r.id, "created_at": r.created_at, "recommendation_text": r.recommendation_text}
+        for r in recs
+    ]
+    return pd.DataFrame(data)
+
+
+def get_recommendation_impact(session: Session, business_id: int, recommendation_id: int) -> dict:
+    rec = session.query(Recommendation).filter(Recommendation.id == recommendation_id).first()
+    if rec is None:
+        return {"possible": False}
+
+    rec_month_start = rec.created_at.date().replace(day=1)
+
+    if rec_month_start.month == 1:
+        before_month_start = rec_month_start.replace(year=rec_month_start.year - 1, month=12)
+    else:
+        before_month_start = rec_month_start.replace(month=rec_month_start.month - 1)
+    before_month_end = rec_month_start - timedelta(days=1)
+
+    if rec_month_start.month == 12:
+        after_month_start = rec_month_start.replace(year=rec_month_start.year + 1, month=1)
+    else:
+        after_month_start = rec_month_start.replace(month=rec_month_start.month + 1)
+    if after_month_start.month == 12:
+        after_month_end = after_month_start.replace(year=after_month_start.year + 1, month=1) - timedelta(days=1)
+    else:
+        after_month_end = after_month_start.replace(month=after_month_start.month + 1) - timedelta(days=1)
+
+    if date_type.today() < after_month_end:
+        return {"possible": False, "reason": "Not enough time has passed yet to measure the 'after' month."}
+
+    before_summary = get_cost_summary(session, business_id, start_date=before_month_start, end_date=before_month_end)
+    after_summary = get_cost_summary(session, business_id, start_date=after_month_start, end_date=after_month_end)
+
+    before_cost = before_summary["total_cost"]
+    after_cost = after_summary["total_cost"]
+    change = after_cost - before_cost
+
+    return {
+        "possible": True,
+        "before_cost": before_cost,
+        "after_cost": after_cost,
+        "change": round(change, 2),
+        "improved": change < 0,
     }
 
 

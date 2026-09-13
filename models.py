@@ -30,6 +30,7 @@ class Business(Base):
 
     entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business")
 
+
 class EnergyEntry(Base):
     __tablename__ = "energy_entries"
 
@@ -46,6 +47,7 @@ class EnergyEntry(Base):
 
     business: Mapped["Business"] = relationship(back_populates="entries")
 
+
 class Outage(Base):
     __tablename__ = "outages"
 
@@ -54,5 +56,16 @@ class Outage(Base):
     date: Mapped[date]
     hours_down: Mapped[float]
     notes: Mapped[Optional[str]] = mapped_column(default=None)
+
+    business: Mapped["Business"] = relationship()
+
+
+class Recommendation(Base):
+    __tablename__ = "recommendations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    recommendation_text: Mapped[str]
 
     business: Mapped["Business"] = relationship()
