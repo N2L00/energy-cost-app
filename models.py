@@ -69,5 +69,6 @@ class Recommendation(Base):
     business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     recommendation_text: Mapped[str]
+    followed: Mapped[Optional[bool]] = mapped_column(default=None)
 
     business: Mapped["Business"] = relationship(overlaps="recommendations")

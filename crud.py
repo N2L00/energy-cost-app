@@ -288,6 +288,24 @@ BASELINE_RATES = {
 }
 
 
+def get_baseline_comparison(session: Session, business_id: int) -> dict:
+    cost_per_unit = get_cost_per_unit(session, business_id)
+    result = {}
+    for source in BASELINE_RATES:
+        value = cost_per_unit.get(source, {}).get("value")
+        baseline = BASELINE_RATES[source]
+        if value is None:
+            status = None
+        elif value > baseline["high"]:
+            status = "above typical"
+        elif value < baseline["low"]:
+            status = "below typical"
+        else:
+            status = "within typical range"
+        result[source] = {"value": value, "status": status, "baseline": baseline}
+    return result
+
+
 def calculate_solar_payback(session: Session, business_id: int, upfront_cost: float, extra_kwh_per_day: float) -> dict:
     cost_per_unit = get_cost_per_unit(session, business_id)
     grid_rate = cost_per_unit["grid"]["value"]
@@ -304,6 +322,19 @@ def calculate_solar_payback(session: Session, business_id: int, upfront_cost: fl
         "monthly_savings": round(monthly_savings, 2),
         "months_to_payback": round(months_to_payback, 1),
     }
+
+
+SOLAR_PANEL_ASSUMPTIONS = {
+    "panel_watts": 400,
+    "peak_sun_hours": 5,
+    "efficiency": 0.8,
+}
+
+
+def panels_to_kwh_per_day(num_panels: float) -> float:
+    a = SOLAR_PANEL_ASSUMPTIONS
+    kwh_per_panel = (a["panel_watts"] * a["peak_sun_hours"] * a["efficiency"]) / 1000
+    return round(num_panels * kwh_per_panel, 2)
 
 
 def simulate_savings(
@@ -364,7 +395,12 @@ def get_recommendations_dataframe(session: Session, business_id: int) -> pd.Data
         .all()
     )
     data = [
-        {"id": r.id, "created_at": r.created_at, "recommendation_text": r.recommendation_text}
+        {
+            "id": r.id,
+            "created_at": r.created_at,
+            "recommendation_text": r.recommendation_text,
+            "followed": r.followed,
+        }
         for r in recs
     ]
     return pd.DataFrame(data)
@@ -415,6 +451,17 @@ def get_recommendation_impact(session: Session, business_id: int, recommendation
 
 
 @handle_db_errors(fallback=None)
+def mark_recommendation_followed(session: Session, recommendation_id: int, followed: bool):
+    rec = session.query(Recommendation).filter(Recommendation.id == recommendation_id).first()
+    if rec is None:
+        return None
+    rec.followed = followed
+    session.commit()
+    session.refresh(rec)
+    return rec
+
+
+@handle_db_errors(fallback=None)
 def log_outage(session: Session, business_id: int, outage_date, hours_down: float, notes: str | None = None):
     outage = Outage(business_id=business_id, date=outage_date, hours_down=hours_down, notes=notes)
     session.add(outage)
@@ -451,15 +498,3 @@ def delete_business(session: Session, business_id: int) -> bool:
     session.delete(business)
     session.commit()
     return True
-
-SOLAR_PANEL_ASSUMPTIONS = {
-    "panel_watts": 400,
-    "peak_sun_hours": 5,
-    "efficiency": 0.8,
-}
-
-
-def panels_to_kwh_per_day(num_panels: float) -> float:
-    a = SOLAR_PANEL_ASSUMPTIONS
-    kwh_per_panel = (a["panel_watts"] * a["peak_sun_hours"] * a["efficiency"]) / 1000
-    return round(num_panels * kwh_per_panel, 2)
