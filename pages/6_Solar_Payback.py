@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import calculate_solar_payback
+from crud import calculate_solar_payback, panels_to_kwh_per_day, SOLAR_PANEL_ASSUMPTIONS
 
 st.set_page_config(page_title="Solar Payback Calculator", page_icon="☀️")
 st.title("☀️ Solar Payback Calculator")
@@ -18,8 +18,19 @@ if "active_business_id" not in st.session_state:
 business_id = st.session_state.active_business_id
 
 upfront_cost = st.number_input("Upfront cost of new solar capacity ($)", min_value=0.0, step=50.0)
-extra_kwh_per_day = st.number_input("Additional kWh per day this would produce", min_value=0.0, step=0.5)
 
+input_method = st.radio("How do you want to estimate output?", ["Number of panels", "I know the kWh/day"])
+
+if input_method == "Number of panels":
+    num_panels = st.number_input("Number of new panels", min_value=0.0, step=1.0)
+    extra_kwh_per_day = panels_to_kwh_per_day(num_panels)
+    st.caption(
+        f"Estimated at {extra_kwh_per_day} kWh/day, assuming {SOLAR_PANEL_ASSUMPTIONS['panel_watts']}W panels, "
+        f"{SOLAR_PANEL_ASSUMPTIONS['peak_sun_hours']} peak sun hours/day, "
+        f"{SOLAR_PANEL_ASSUMPTIONS['efficiency']*100:.0f}% real-world efficiency."
+    )
+else:
+    extra_kwh_per_day = st.number_input("Additional kWh per day this would produce", min_value=0.0, step=0.5)
 if st.button("Calculate Payback"):
     session = SessionLocal()
     result = calculate_solar_payback(session, business_id, upfront_cost, extra_kwh_per_day)

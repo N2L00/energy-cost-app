@@ -288,39 +288,21 @@ BASELINE_RATES = {
 }
 
 
-def get_baseline_comparison(session: Session, business_id: int) -> dict:
-    cost_per_unit = get_cost_per_unit(session, business_id)
-    result = {}
-    for source in BASELINE_RATES:
-        value = cost_per_unit.get(source, {}).get("value")
-        baseline = BASELINE_RATES[source]
-        if value is None:
-            status = None
-        elif value > baseline["high"]:
-            status = "above typical"
-        elif value < baseline["low"]:
-            status = "below typical"
-        else:
-            status = "within typical range"
-        result[source] = {"value": value, "status": status, "baseline": baseline}
-    return result
-
-
 def calculate_solar_payback(session: Session, business_id: int, upfront_cost: float, extra_kwh_per_day: float) -> dict:
     cost_per_unit = get_cost_per_unit(session, business_id)
     grid_rate = cost_per_unit["grid"]["value"]
 
-    if grid_rate is None or extra_kwh_per_day <= 0:
+    if grid_rate is None or grid_rate <= 0 or extra_kwh_per_day <= 0:
         return {"possible": False}
 
     daily_savings = extra_kwh_per_day * grid_rate
     monthly_savings = daily_savings * 30
-    months_to_payback = upfront_cost / monthly_savings if monthly_savings > 0 else None
+    months_to_payback = upfront_cost / monthly_savings
 
     return {
         "possible": True,
         "monthly_savings": round(monthly_savings, 2),
-        "months_to_payback": round(months_to_payback, 1) if months_to_payback else None,
+        "months_to_payback": round(months_to_payback, 1),
     }
 
 
@@ -469,3 +451,15 @@ def delete_business(session: Session, business_id: int) -> bool:
     session.delete(business)
     session.commit()
     return True
+
+SOLAR_PANEL_ASSUMPTIONS = {
+    "panel_watts": 400,
+    "peak_sun_hours": 5,
+    "efficiency": 0.8,
+}
+
+
+def panels_to_kwh_per_day(num_panels: float) -> float:
+    a = SOLAR_PANEL_ASSUMPTIONS
+    kwh_per_panel = (a["panel_watts"] * a["peak_sun_hours"] * a["efficiency"]) / 1000
+    return round(num_panels * kwh_per_panel, 2)
