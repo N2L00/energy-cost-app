@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison
 from models import EnergySource, Currency
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
@@ -52,6 +52,19 @@ else:
             col.metric(f"{source.capitalize()} — {data['metric']}", f"${data['value']:.3f}")
         else:
             col.metric(f"{source.capitalize()} — {data['metric']}", "No data")
+
+    st.subheader("How Your Grid Rate Compares")
+    baseline = get_baseline_comparison(session, business_id)
+    grid_baseline = baseline.get("grid")
+    if grid_baseline and grid_baseline["value"] is not None:
+        status = grid_baseline["status"]
+        note = grid_baseline["baseline"]["note"]
+        if status == "above typical":
+            st.warning(f"Your grid rate (\\${grid_baseline['value']:.3f}/kWh) is above the typical range. Reference: {note}")
+        elif status == "below typical":
+            st.info(f"Your grid rate (\\${grid_baseline['value']:.3f}/kWh) is below the typical range. Reference: {note}")
+        else:
+            st.success(f"Your grid rate (\\${grid_baseline['value']:.3f}/kWh) is within the typical range. Reference: {note}")
 
     st.subheader("Cost by Source")
     st.bar_chart(cost_by_source)

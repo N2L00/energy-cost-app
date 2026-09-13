@@ -280,6 +280,32 @@ def get_cost_per_unit(session: Session, business_id: int) -> dict:
     return result
 
 
+BASELINE_RATES = {
+    "grid": {
+        "low": 0.10, "high": 0.27,
+        "note": "EDL subsidized tiers: ~\\$0.10/kWh (first 100 kWh), ~\\$0.27/kWh above",
+    },
+}
+
+
+def get_baseline_comparison(session: Session, business_id: int) -> dict:
+    cost_per_unit = get_cost_per_unit(session, business_id)
+    result = {}
+    for source in BASELINE_RATES:
+        value = cost_per_unit.get(source, {}).get("value")
+        baseline = BASELINE_RATES[source]
+        if value is None:
+            status = None
+        elif value > baseline["high"]:
+            status = "above typical"
+        elif value < baseline["low"]:
+            status = "below typical"
+        else:
+            status = "within typical range"
+        result[source] = {"value": value, "status": status, "baseline": baseline}
+    return result
+
+
 def calculate_solar_payback(session: Session, business_id: int, upfront_cost: float, extra_kwh_per_day: float) -> dict:
     cost_per_unit = get_cost_per_unit(session, business_id)
     grid_rate = cost_per_unit["grid"]["value"]
