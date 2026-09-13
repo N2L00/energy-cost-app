@@ -1,8 +1,22 @@
 import pandas as pd
-from datetime import date as date_type, timedelta
+from functools import wraps
+from datetime import date as date_type
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from models import Business, EnergyEntry, EnergySource, Currency, Outage, Recommendation
+
+
+def handle_db_errors(fallback):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except SQLAlchemyError:
+                return fallback
+        return wrapper
+    return decorator
 
 
 def to_usd(cost: float, currency: Currency, exchange_rate: float) -> float:
@@ -11,6 +25,7 @@ def to_usd(cost: float, currency: Currency, exchange_rate: float) -> float:
     return cost
 
 
+@handle_db_errors(fallback=None)
 def get_or_create_default_business(session: Session) -> Business:
     business = session.query(Business).first()
     if business is None:
@@ -21,6 +36,7 @@ def get_or_create_default_business(session: Session) -> Business:
     return business
 
 
+@handle_db_errors(fallback=None)
 def create_energy_entry(
     session: Session,
     business_id: int,
@@ -50,6 +66,7 @@ def create_energy_entry(
     return entry
 
 
+@handle_db_errors(fallback=pd.DataFrame())
 def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     business = session.query(Business).filter(Business.id == business_id).first()
     exchange_rate = business.exchange_rate if business else 89000.0
@@ -77,6 +94,16 @@ def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
+_EMPTY_SUMMARY = {
+    "entry_count": 0,
+    "total_cost": 0.0,
+    "total_kwh": 0.0,
+    "total_diesel_liters": 0.0,
+    "total_hours_run": 0.0,
+}
+
+
+@handle_db_errors(fallback=_EMPTY_SUMMARY)
 def get_cost_summary(
     session: Session,
     business_id: int,
@@ -119,6 +146,7 @@ def get_all_source_summaries(session: Session, business_id: int) -> dict:
     }
 
 
+@handle_db_errors(fallback=None)
 def create_business(session: Session, name: str) -> Business:
     business = Business(name=name)
     session.add(business)
@@ -127,14 +155,17 @@ def create_business(session: Session, name: str) -> Business:
     return business
 
 
+@handle_db_errors(fallback=[])
 def get_all_businesses(session: Session) -> list[Business]:
     return session.query(Business).all()
 
 
+@handle_db_errors(fallback=None)
 def get_business_by_id(session: Session, business_id: int) -> Business | None:
     return session.query(Business).filter(Business.id == business_id).first()
 
 
+@handle_db_errors(fallback=None)
 def update_exchange_rate(session: Session, business_id: int, new_rate: float) -> Business | None:
     business = get_business_by_id(session, business_id)
     if business is None:
@@ -145,6 +176,7 @@ def update_exchange_rate(session: Session, business_id: int, new_rate: float) ->
     return business
 
 
+@handle_db_errors(fallback=None)
 def update_budget_threshold(session: Session, business_id: int, new_threshold: float | None) -> Business | None:
     business = get_business_by_id(session, business_id)
     if business is None:
@@ -155,8 +187,12 @@ def update_budget_threshold(session: Session, business_id: int, new_threshold: f
     return business
 
 
+@handle_db_errors(fallback={"spent": 0.0, "threshold": None, "over_budget": False})
 def get_current_month_spending(session: Session, business_id: int) -> dict:
     business = get_business_by_id(session, business_id)
+    if business is None:
+        return {"spent": 0.0, "threshold": None, "over_budget": False}
+
     today = date_type.today()
     month_start = today.replace(day=1)
 
@@ -172,10 +208,12 @@ def get_current_month_spending(session: Session, business_id: int) -> dict:
     }
 
 
+@handle_db_errors(fallback=None)
 def get_entry_by_id(session: Session, entry_id: int) -> EnergyEntry | None:
     return session.query(EnergyEntry).filter(EnergyEntry.id == entry_id).first()
 
 
+@handle_db_errors(fallback=None)
 def update_energy_entry(
     session: Session,
     entry_id: int,
@@ -206,21 +244,13 @@ def update_energy_entry(
     return entry
 
 
+@handle_db_errors(fallback=False)
 def delete_energy_entry(session: Session, entry_id: int) -> bool:
     entry = get_entry_by_id(session, entry_id)
     if entry is None:
         return False
 
     session.delete(entry)
-    session.commit()
-    return True
-
-
-def delete_business(session: Session, business_id: int) -> bool:
-    business = get_business_by_id(session, business_id)
-    if business is None:
-        return False
-    session.delete(business)
     session.commit()
     return True
 
@@ -308,6 +338,7 @@ def simulate_savings(
     }
 
 
+@handle_db_errors(fallback=None)
 def save_recommendation(session: Session, business_id: int, recommendation_text: str):
     rec = Recommendation(business_id=business_id, recommendation_text=recommendation_text)
     session.add(rec)
@@ -316,6 +347,7 @@ def save_recommendation(session: Session, business_id: int, recommendation_text:
     return rec
 
 
+@handle_db_errors(fallback=pd.DataFrame())
 def get_recommendations_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     recs = (
         session.query(Recommendation)
@@ -330,7 +362,10 @@ def get_recommendations_dataframe(session: Session, business_id: int) -> pd.Data
     return pd.DataFrame(data)
 
 
+@handle_db_errors(fallback={"possible": False})
 def get_recommendation_impact(session: Session, business_id: int, recommendation_id: int) -> dict:
+    from datetime import timedelta
+
     rec = session.query(Recommendation).filter(Recommendation.id == recommendation_id).first()
     if rec is None:
         return {"possible": False}
@@ -371,6 +406,7 @@ def get_recommendation_impact(session: Session, business_id: int, recommendation
     }
 
 
+@handle_db_errors(fallback=None)
 def log_outage(session: Session, business_id: int, outage_date, hours_down: float, notes: str | None = None):
     outage = Outage(business_id=business_id, date=outage_date, hours_down=hours_down, notes=notes)
     session.add(outage)
@@ -379,6 +415,7 @@ def log_outage(session: Session, business_id: int, outage_date, hours_down: floa
     return outage
 
 
+@handle_db_errors(fallback=pd.DataFrame())
 def get_outages_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     outages = (
         session.query(Outage)
@@ -392,6 +429,17 @@ def get_outages_dataframe(session: Session, business_id: int) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
+@handle_db_errors(fallback=0.0)
 def get_total_outage_hours(session: Session, business_id: int) -> float:
     outages = session.query(Outage).filter(Outage.business_id == business_id).all()
     return round(sum(o.hours_down for o in outages), 2)
+
+
+@handle_db_errors(fallback=False)
+def delete_business(session: Session, business_id: int) -> bool:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return False
+    session.delete(business)
+    session.commit()
+    return True
