@@ -3,6 +3,8 @@ import pandas as pd
 from database import SessionLocal
 from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary
 from models import EnergySource, Currency
+from reports import generate_entries_pdf
+
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
 st.title("📊 Energy Cost Dashboard")
@@ -107,6 +109,13 @@ else:
         data=df.to_csv(index=False),
         file_name="energy_entries.csv",
         mime="text/csv",
+    
+    )
+    st.download_button(
+        "Download PDF Report",
+        data=generate_entries_pdf(df),
+        file_name="energy_report.pdf",
+        mime="application/pdf",
     )
 
     st.subheader("Edit or Delete an Entry")
