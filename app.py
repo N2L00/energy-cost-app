@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business
+from crud import get_all_businesses, create_business, get_or_create_default_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business, get_outage_schedule, set_outage_schedule
 
 st.set_page_config(page_title="Energy Cost Tracker", page_icon="⚡")
 
@@ -65,6 +65,29 @@ with st.expander("🎯 Monthly Budget Alert"):
     if st.button("Update Budget"):
         update_budget_threshold(session, current_business.id, new_threshold if new_threshold > 0 else None)
         st.success("Budget updated!")
+        st.rerun()
+
+with st.expander("🔌 Recurring Outage Schedule"):
+    st.write(
+        "If your grid outages follow a predictable daily pattern, set it once here "
+        "instead of logging every outage individually."
+    )
+    current_schedule = get_outage_schedule(session, current_business.id)
+    current_hours = current_schedule.hours_per_day if current_schedule else 0.0
+    st.write(
+        f"Current schedule: {current_hours} hours/day" if current_schedule
+        else "No recurring schedule set."
+    )
+    new_hours = st.number_input(
+        "Typical outage hours per day",
+        min_value=0.0,
+        max_value=24.0,
+        value=float(current_hours),
+        step=0.5,
+    )
+    if st.button("Update Schedule"):
+        set_outage_schedule(session, current_business.id, new_hours)
+        st.success("Outage schedule updated!")
         st.rerun()
 
 with st.expander("🗑️ Delete This Business"):

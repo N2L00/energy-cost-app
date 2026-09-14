@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary
 from models import EnergySource, Currency
 
 st.set_page_config(page_title="Dashboard", page_icon="📊")
@@ -42,6 +42,16 @@ else:
             )
     total_outage_hours = get_total_outage_hours(session, business_id)
     st.metric("Total Outage Hours", f"{total_outage_hours:.1f}")
+    outage_summary = get_current_month_outage_summary(session, business_id)
+    if outage_summary["scheduled_hours"] > 0:
+        sched_col, logged_col = st.columns(2)
+        sched_col.metric("Scheduled Outage Hours (this month)", f"{outage_summary['scheduled_hours']:.1f}")
+        logged_col.metric("Manually Logged (this month)", f"{outage_summary['manually_logged_hours']:.1f}")
+        st.caption(
+            "These are shown separately and never added together, since a scheduled estimate "
+            "and a specific logged outage may overlap on the same day."
+        )
+
 
     st.subheader("Cost Efficiency by Source")
     cost_per_unit = get_cost_per_unit(session, business_id)

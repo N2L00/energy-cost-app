@@ -4,7 +4,7 @@ from datetime import date as date_type
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import Business, EnergyEntry, EnergySource, Currency, Outage, Recommendation
+from models import Business, EnergyEntry, EnergySource, Currency, Outage, Recommendation, OutageSchedule
 
 
 def handle_db_errors(fallback):
@@ -488,6 +488,54 @@ def get_outages_dataframe(session: Session, business_id: int) -> pd.DataFrame:
 def get_total_outage_hours(session: Session, business_id: int) -> float:
     outages = session.query(Outage).filter(Outage.business_id == business_id).all()
     return round(sum(o.hours_down for o in outages), 2)
+
+@handle_db_errors(fallback=None)
+def get_outage_schedule(session: Session, business_id: int) -> OutageSchedule | None:
+    return (
+        session.query(OutageSchedule)
+        .filter(OutageSchedule.business_id == business_id, OutageSchedule.active == True)
+        .first()
+    )
+
+
+@handle_db_errors(fallback=None)
+def set_outage_schedule(session: Session, business_id: int, hours_per_day: float) -> OutageSchedule:
+    schedule = get_outage_schedule(session, business_id)
+    if schedule is None:
+        schedule = OutageSchedule(business_id=business_id, hours_per_day=hours_per_day, active=True)
+        session.add(schedule)
+    else:
+        schedule.hours_per_day = hours_per_day
+    session.commit()
+    session.refresh(schedule)
+    return schedule
+
+
+def get_scheduled_outage_hours(session: Session, business_id: int, start_date: date_type, end_date: date_type) -> float:
+    schedule = get_outage_schedule(session, business_id)
+    if schedule is None:
+        return 0.0
+    num_days = (end_date - start_date).days + 1
+    return round(schedule.hours_per_day * num_days, 2)
+
+
+@handle_db_errors(fallback=0.0)
+def get_manually_logged_outage_hours(session: Session, business_id: int, start_date: date_type, end_date: date_type) -> float:
+    outages = (
+        session.query(Outage)
+        .filter(Outage.business_id == business_id, Outage.date >= start_date, Outage.date <= end_date)
+        .all()
+    )
+    return round(sum(o.hours_down for o in outages), 2)
+
+
+def get_current_month_outage_summary(session: Session, business_id: int) -> dict:
+    today = date_type.today()
+    month_start = today.replace(day=1)
+    return {
+        "scheduled_hours": get_scheduled_outage_hours(session, business_id, month_start, today),
+        "manually_logged_hours": get_manually_logged_outage_hours(session, business_id, month_start, today),
+    }
 
 
 @handle_db_errors(fallback=False)
