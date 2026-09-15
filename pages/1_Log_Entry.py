@@ -36,6 +36,14 @@ if source == "generator":
     diesel_liters = st.number_input("Diesel Used (liters)", min_value=0.0, step=1.0)
     hours_run = st.number_input("Hours Run", min_value=0.0, step=0.5)
 
+time_of_day = None
+if source in ("grid", "generator"):
+    time_of_day = st.selectbox(
+        "Time of Day",
+        options=["morning", "afternoon", "evening_night"],
+        format_func=lambda t: {"morning": "Morning", "afternoon": "Afternoon", "evening_night": "Evening/Night"}[t],
+    )
+
 notes = st.text_area("Notes (optional)")
 
 if st.button("Save Entry"):
@@ -50,6 +58,7 @@ if st.button("Save Entry"):
         diesel_liters=diesel_liters,
         hours_run=hours_run,
         notes=notes if notes else None,
+        time_of_day=time_of_day,
     )
     st.success("Entry saved!")
 
@@ -58,7 +67,9 @@ st.subheader("Import Entries from CSV")
 st.caption(
     "Columns: date (YYYY-MM-DD), source (grid/generator/solar), "
     "currency (USD/LBP, optional, default USD), cost, units_kwh (optional), "
-    "diesel_liters (optional), hours_run (optional), notes (optional)"
+    "diesel_liters (optional), hours_run (optional), "
+    "time_of_day (morning/afternoon/evening_night, optional, grid/generator only), "
+    "notes (optional)"
 )
 
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
@@ -77,6 +88,7 @@ if uploaded_file is not None:
         if st.button("Import Entries"):
             valid_sources = {s.value for s in EnergySource}
             valid_currencies = {c.value for c in Currency}
+            valid_times_of_day = {"morning", "afternoon", "evening_night"}
 
             def optional_float(row, col):
                 val = row.get(col)
@@ -126,6 +138,15 @@ if uploaded_file is not None:
                     skipped.append((row_num, f"invalid cost: {raw_cost}"))
                     continue
 
+                raw_time_of_day = row.get("time_of_day")
+                if raw_time_of_day is None or pd.isna(raw_time_of_day) or str(raw_time_of_day).strip() == "":
+                    time_of_day_value = None
+                else:
+                    time_of_day_value = str(raw_time_of_day).strip().lower()
+                    if time_of_day_value not in valid_times_of_day:
+                        skipped.append((row_num, f"unrecognized time_of_day: {raw_time_of_day}"))
+                        continue
+
                 raw_notes = row.get("notes")
                 notes_value = None if raw_notes is None or pd.isna(raw_notes) else str(raw_notes)
 
@@ -140,6 +161,7 @@ if uploaded_file is not None:
                     diesel_liters=optional_float(row, "diesel_liters"),
                     hours_run=optional_float(row, "hours_run"),
                     notes=notes_value,
+                    time_of_day=time_of_day_value,
                 )
                 if result is not None:
                     imported += 1

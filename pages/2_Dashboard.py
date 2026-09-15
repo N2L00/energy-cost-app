@@ -5,7 +5,6 @@ from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry
 from models import EnergySource, Currency
 from reports import generate_entries_pdf
 
-
 st.set_page_config(page_title="Dashboard", page_icon="📊")
 st.title("📊 Energy Cost Dashboard")
 
@@ -44,6 +43,7 @@ else:
             )
     total_outage_hours = get_total_outage_hours(session, business_id)
     st.metric("Total Outage Hours", f"{total_outage_hours:.1f}")
+
     outage_summary = get_current_month_outage_summary(session, business_id)
     if outage_summary["scheduled_hours"] > 0:
         sched_col, logged_col = st.columns(2)
@@ -53,7 +53,6 @@ else:
             "These are shown separately and never added together, since a scheduled estimate "
             "and a specific logged outage may overlap on the same day."
         )
-
 
     st.subheader("Cost Efficiency by Source")
     cost_per_unit = get_cost_per_unit(session, business_id)
@@ -109,7 +108,6 @@ else:
         data=df.to_csv(index=False),
         file_name="energy_entries.csv",
         mime="text/csv",
-    
     )
     st.download_button(
         "Download PDF Report",
@@ -165,6 +163,18 @@ else:
             value=float(selected_row["hours_run"]) if selected_row["hours_run"] else 0.0,
         )
 
+    edit_time_of_day = None
+    if edit_source in ("grid", "generator"):
+        time_options = ["morning", "afternoon", "evening_night"]
+        current_time = selected_row.get("time_of_day")
+        default_index = time_options.index(current_time) if current_time in time_options else 0
+        edit_time_of_day = st.selectbox(
+            "Time of Day",
+            options=time_options,
+            index=default_index,
+            format_func=lambda t: {"morning": "Morning", "afternoon": "Afternoon", "evening_night": "Evening/Night"}[t],
+        )
+
     edit_notes = st.text_area("Notes (optional)", value=selected_row["notes"] or "")
 
     col_update, col_delete = st.columns(2)
@@ -182,6 +192,7 @@ else:
                 diesel_liters=edit_diesel_liters,
                 hours_run=edit_hours_run,
                 notes=edit_notes if edit_notes else None,
+                time_of_day=edit_time_of_day,
             )
             st.success("Entry updated!")
             st.rerun()

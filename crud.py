@@ -48,6 +48,7 @@ def create_energy_entry(
     diesel_liters: float | None = None,
     hours_run: float | None = None,
     notes: str | None = None,
+    time_of_day: str | None = None,
 ) -> EnergyEntry:
     entry = EnergyEntry(
         business_id=business_id,
@@ -59,6 +60,7 @@ def create_energy_entry(
         diesel_liters=diesel_liters,
         hours_run=hours_run,
         notes=notes,
+        time_of_day=time_of_day,
     )
     session.add(entry)
     session.commit()
@@ -88,6 +90,7 @@ def get_entries_dataframe(session: Session, business_id: int) -> pd.DataFrame:
             "diesel_liters": e.diesel_liters,
             "hours_run": e.hours_run,
             "notes": e.notes,
+            "time_of_day": e.time_of_day,
         }
         for e in entries
     ]
@@ -225,6 +228,7 @@ def update_energy_entry(
     diesel_liters: float | None = None,
     hours_run: float | None = None,
     notes: str | None = None,
+    time_of_day: str | None = None,
 ) -> EnergyEntry | None:
     entry = get_entry_by_id(session, entry_id)
     if entry is None:
@@ -238,6 +242,7 @@ def update_energy_entry(
     entry.diesel_liters = diesel_liters
     entry.hours_run = hours_run
     entry.notes = notes
+    entry.time_of_day = time_of_day
 
     session.commit()
     session.refresh(entry)
@@ -276,6 +281,26 @@ def get_cost_per_unit(session: Session, business_id: int) -> dict:
                 }
             else:
                 result[source] = {"metric": "cost per hour", "value": None}
+
+    return result
+
+
+def get_usage_by_time_of_day(session: Session, business_id: int) -> dict:
+    df = get_entries_dataframe(session, business_id)
+    buckets = ["morning", "afternoon", "evening_night", "unspecified"]
+
+    if df.empty:
+        return {source: {bucket: 0.0 for bucket in buckets} for source in ("grid", "generator")}
+
+    result = {}
+    for source in ("grid", "generator"):
+        source_df = df[df["source"] == source]
+        bucket_totals = {bucket: 0.0 for bucket in buckets}
+        if not source_df.empty:
+            grouped = source_df.groupby(source_df["time_of_day"].fillna("unspecified"))["cost_usd"].sum()
+            for bucket, total in grouped.items():
+                bucket_totals[bucket] = round(float(total), 2)
+        result[source] = bucket_totals
 
     return result
 
@@ -488,6 +513,7 @@ def get_outages_dataframe(session: Session, business_id: int) -> pd.DataFrame:
 def get_total_outage_hours(session: Session, business_id: int) -> float:
     outages = session.query(Outage).filter(Outage.business_id == business_id).all()
     return round(sum(o.hours_down for o in outages), 2)
+
 
 @handle_db_errors(fallback=None)
 def get_outage_schedule(session: Session, business_id: int) -> OutageSchedule | None:
