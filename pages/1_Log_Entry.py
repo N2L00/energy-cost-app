@@ -3,50 +3,53 @@ import pandas as pd
 
 from database import SessionLocal
 from models import EnergySource, Currency
-from crud import create_energy_entry
-
-st.set_page_config(page_title="Log Entry", page_icon="📝")
-st.title("📝 Log Energy Entry")
+from crud import create_energy_entry, get_business_language
+from translations import t
 
 session = SessionLocal()
 
 if "active_business_id" not in st.session_state:
-    st.warning("No business selected. Please go to the home page first.")
+    st.warning(t("no_business_warning", "en"))
     st.stop()
 
 business_id = st.session_state.active_business_id
+language = get_business_language(session, business_id)
 
+st.title(t("log_entry_title", language))
+
+source_options = [s.value for s in EnergySource]
 source = st.selectbox(
-    "Energy Source",
-    options=[s.value for s in EnergySource],
+    t("energy_source_label", language),
+    options=source_options,
+    format_func=lambda s: t(f"source_{s}", language),
 )
 
-entry_date = st.date_input("Date")
-currency = st.selectbox("Currency", options=["USD", "LBP"])
-cost = st.number_input("Cost", min_value=0.0, step=0.5)
+entry_date = st.date_input(t("date_label", language))
+currency = st.selectbox(t("currency_label", language), options=["USD", "LBP"])
+cost = st.number_input(t("cost_label", language), min_value=0.0, step=0.5)
 
 units_kwh = None
 diesel_liters = None
 hours_run = None
 
 if source in ("grid", "solar"):
-    units_kwh = st.number_input("Units Consumed (kWh)", min_value=0.0, step=1.0)
+    units_kwh = st.number_input(t("units_kwh_label", language), min_value=0.0, step=1.0)
 
 if source == "generator":
-    diesel_liters = st.number_input("Diesel Used (liters)", min_value=0.0, step=1.0)
-    hours_run = st.number_input("Hours Run", min_value=0.0, step=0.5)
+    diesel_liters = st.number_input(t("diesel_liters_label", language), min_value=0.0, step=1.0)
+    hours_run = st.number_input(t("hours_run_label", language), min_value=0.0, step=0.5)
 
 time_of_day = None
 if source in ("grid", "generator"):
     time_of_day = st.selectbox(
-        "Time of Day",
+        t("time_of_day_label", language),
         options=["morning", "afternoon", "evening_night"],
-        format_func=lambda t: {"morning": "Morning", "afternoon": "Afternoon", "evening_night": "Evening/Night"}[t],
+        format_func=lambda tod: t(f"time_of_day_{tod}", language),
     )
 
-notes = st.text_area("Notes (optional)")
+notes = st.text_area(t("notes_label", language))
 
-if st.button("Save Entry"):
+if st.button(t("save_entry_button", language)):
     create_energy_entry(
         session=session,
         business_id=business_id,
@@ -60,32 +63,26 @@ if st.button("Save Entry"):
         notes=notes if notes else None,
         time_of_day=time_of_day,
     )
-    st.success("Entry saved!")
+    st.success(t("entry_saved_success", language))
 
 st.divider()
-st.subheader("Import Entries from CSV")
-st.caption(
-    "Columns: date (YYYY-MM-DD), source (grid/generator/solar), "
-    "currency (USD/LBP, optional, default USD), cost, units_kwh (optional), "
-    "diesel_liters (optional), hours_run (optional), "
-    "time_of_day (morning/afternoon/evening_night, optional, grid/generator only), "
-    "notes (optional)"
-)
+st.subheader(t("import_csv_header", language))
+st.caption(t("import_csv_caption", language))
 
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+uploaded_file = st.file_uploader(t("choose_csv_label", language), type="csv")
 
 if uploaded_file is not None:
     try:
         import_df = pd.read_csv(uploaded_file)
     except Exception as e:
-        st.error(f"Could not read CSV: {e}")
+        st.error(t("could_not_read_csv", language, error=e))
         import_df = None
 
     if import_df is not None:
-        st.write("Preview:")
+        st.write(t("preview_label", language))
         st.dataframe(import_df, use_container_width=True)
 
-        if st.button("Import Entries"):
+        if st.button(t("import_entries_button", language)):
             valid_sources = {s.value for s in EnergySource}
             valid_currencies = {c.value for c in Currency}
             valid_times_of_day = {"morning", "afternoon", "evening_night"}
@@ -110,17 +107,17 @@ if uploaded_file is not None:
                 raw_cost = row.get("cost")
 
                 if pd.isna(raw_date) or pd.isna(raw_source) or pd.isna(raw_cost):
-                    skipped.append((row_num, "missing required field (date, source, or cost)"))
+                    skipped.append((row_num, t("missing_required_field", language)))
                     continue
 
                 parsed_date = pd.to_datetime(raw_date, format="%Y-%m-%d", errors="coerce")
                 if pd.isna(parsed_date):
-                    skipped.append((row_num, f"invalid date: {raw_date}"))
+                    skipped.append((row_num, t("invalid_date", language, value=raw_date)))
                     continue
 
                 source_value = str(raw_source).strip().lower()
                 if source_value not in valid_sources:
-                    skipped.append((row_num, f"unrecognized source: {raw_source}"))
+                    skipped.append((row_num, t("unrecognized_source", language, value=raw_source)))
                     continue
 
                 raw_currency = row.get("currency")
@@ -129,13 +126,13 @@ if uploaded_file is not None:
                 else:
                     currency_value = str(raw_currency).strip().upper()
                     if currency_value not in valid_currencies:
-                        skipped.append((row_num, f"unrecognized currency: {raw_currency}"))
+                        skipped.append((row_num, t("unrecognized_currency", language, value=raw_currency)))
                         continue
 
                 try:
                     cost_value = float(raw_cost)
                 except (TypeError, ValueError):
-                    skipped.append((row_num, f"invalid cost: {raw_cost}"))
+                    skipped.append((row_num, t("invalid_cost", language, value=raw_cost)))
                     continue
 
                 raw_time_of_day = row.get("time_of_day")
@@ -144,7 +141,7 @@ if uploaded_file is not None:
                 else:
                     time_of_day_value = str(raw_time_of_day).strip().lower()
                     if time_of_day_value not in valid_times_of_day:
-                        skipped.append((row_num, f"unrecognized time_of_day: {raw_time_of_day}"))
+                        skipped.append((row_num, t("unrecognized_time_of_day", language, value=raw_time_of_day)))
                         continue
 
                 raw_notes = row.get("notes")
@@ -166,12 +163,12 @@ if uploaded_file is not None:
                 if result is not None:
                     imported += 1
                 else:
-                    skipped.append((row_num, "database error while saving"))
-            st.success(f"Imported {imported} of {len(import_df)} row(s).")
+                    skipped.append((row_num, t("database_error_while_saving", language)))
+            st.success(t("imported_rows_success", language, imported=imported, total=len(import_df)))
             if skipped:
-                st.warning(f"Skipped {len(skipped)} row(s):")
+                st.warning(t("skipped_rows_warning", language, count=len(skipped)))
                 st.dataframe(
-                    pd.DataFrame(skipped, columns=["Row", "Reason"]),
+                    pd.DataFrame(skipped, columns=[t("row_column", language), t("reason_column", language)]),
                     use_container_width=True,
                 )
 

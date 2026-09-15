@@ -1,22 +1,26 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import save_recommendation, get_recommendations_dataframe, get_recommendation_impact, mark_recommendation_followed
+from crud import save_recommendation, get_recommendations_dataframe, get_recommendation_impact, mark_recommendation_followed, get_business_language
 from ai_query import get_recommendation
-
-st.set_page_config(page_title="Recommendations", page_icon="💡")
-st.title("💡 Cost-Saving Recommendations")
+from translations import t
 
 if "active_business_id" not in st.session_state:
-    st.warning("No business selected. Please go to the home page first.")
+    st.warning(t("no_business_warning", "en"))
     st.stop()
 
 business_id = st.session_state.active_business_id
 
-st.write("Get an AI-generated recommendation on how to shift your energy usage to reduce costs.")
+lang_session = SessionLocal()
+language = get_business_language(lang_session, business_id)
+lang_session.close()
 
-if st.button("Generate Recommendation"):
-    with st.spinner("Analyzing your energy data..."):
+st.title(t("recommendations_title", language))
+
+st.write(t("recommendations_intro", language))
+
+if st.button(t("generate_recommendation_button", language)):
+    with st.spinner(t("analyzing_spinner", language)):
         session = SessionLocal()
         recommendation = get_recommendation(session, business_id)
         save_recommendation(session, business_id, recommendation)
@@ -24,13 +28,13 @@ if st.button("Generate Recommendation"):
 
     st.text(recommendation)
 
-st.subheader("Past Recommendations")
+st.subheader(t("past_recommendations_header", language))
 
 session = SessionLocal()
 recs_df = get_recommendations_dataframe(session, business_id)
 
 if recs_df.empty:
-    st.info("No recommendations generated yet.")
+    st.info(t("no_recommendations_info", language))
 else:
     for _, row in recs_df.iterrows():
         with st.expander(f"{row['created_at'].strftime('%B %d, %Y')}"):
@@ -40,33 +44,39 @@ else:
             if followed_status is None:
                 col_yes, col_no = st.columns(2)
                 with col_yes:
-                    if st.button("I followed this", key=f"followed_yes_{row['id']}"):
+                    if st.button(t("followed_yes_button", language), key=f"followed_yes_{row['id']}"):
                         mark_recommendation_followed(session, row["id"], True)
                         st.rerun()
                 with col_no:
-                    if st.button("I didn't follow this", key=f"followed_no_{row['id']}"):
+                    if st.button(t("followed_no_button", language), key=f"followed_no_{row['id']}"):
                         mark_recommendation_followed(session, row["id"], False)
                         st.rerun()
             elif followed_status:
-                st.caption("✅ You followed this recommendation")
+                st.caption(t("followed_caption", language))
             else:
-                st.caption("⏭️ You didn't follow this recommendation")
+                st.caption(t("not_followed_caption", language))
 
             impact = get_recommendation_impact(session, business_id, row["id"])
             if not impact["possible"]:
-                st.caption(impact.get("reason", "Not enough data to measure impact yet."))
+                st.caption(impact.get("reason", t("impact_default_reason", language)))
             else:
                 if impact["improved"]:
                     st.success(
-                        f"Spending dropped from \\${impact['before_cost']:,.2f} to "
-                        f"\\${impact['after_cost']:,.2f} the following month "
-                        f"(saved \\${abs(impact['change']):,.2f})"
+                        t(
+                            "impact_improved", language,
+                            before=f"{impact['before_cost']:,.2f}",
+                            after=f"{impact['after_cost']:,.2f}",
+                            saved=f"{abs(impact['change']):,.2f}",
+                        )
                     )
                 else:
                     st.warning(
-                        f"Spending went from \\${impact['before_cost']:,.2f} to "
-                        f"\\${impact['after_cost']:,.2f} the following month "
-                        f"(increased \\${impact['change']:,.2f})"
+                        t(
+                            "impact_worsened", language,
+                            before=f"{impact['before_cost']:,.2f}",
+                            after=f"{impact['after_cost']:,.2f}",
+                            increase=f"{impact['change']:,.2f}",
+                        )
                     )
 
 session.close()

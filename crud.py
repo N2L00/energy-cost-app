@@ -190,6 +190,25 @@ def update_budget_threshold(session: Session, business_id: int, new_threshold: f
     return business
 
 
+@handle_db_errors(fallback="en")
+def get_business_language(session: Session, business_id: int) -> str:
+    business = get_business_by_id(session, business_id)
+    if business is None or not business.language:
+        return "en"
+    return business.language
+
+
+@handle_db_errors(fallback=None)
+def update_business_language(session: Session, business_id: int, language: str) -> Business | None:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return None
+    business.language = language
+    session.commit()
+    session.refresh(business)
+    return business
+
+
 @handle_db_errors(fallback={"spent": 0.0, "threshold": None, "over_budget": False})
 def get_current_month_spending(session: Session, business_id: int) -> dict:
     business = get_business_by_id(session, business_id)
