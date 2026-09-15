@@ -47,6 +47,7 @@ class EnergyEntry(Base):
     diesel_liters: Mapped[Optional[float]] = mapped_column(default=None)
     hours_run: Mapped[Optional[float]] = mapped_column(default=None)
     notes: Mapped[Optional[str]] = mapped_column(default=None)
+    time_of_day: Mapped[Optional[str]] = mapped_column(default=None)
 
     business: Mapped["Business"] = relationship(back_populates="entries")
 
