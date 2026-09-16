@@ -128,23 +128,26 @@ else:
         mime="application/pdf",
     )
 
-    today = date.today()
-    current_business = get_business_by_id(session, business_id)
-    source_summaries = get_current_month_source_summaries(session, business_id)
-    source_totals = {source: data["total_cost"] for source, data in source_summaries.items()}
-    summary_card_bytes = generate_summary_card(
-        business_name=current_business.name,
-        month_label=f"{month_name(today.month, language)} {today.year}",
-        total_cost=budget_info["spent"],
-        source_totals=source_totals,
-        language=language,
-    )
-    st.download_button(
-        t("download_summary_card_button", language),
-        data=summary_card_bytes,
-        file_name="energy_summary_card.png",
-        mime="image/png",
-    )
+    if language != "ar":
+        today = date.today()
+        current_business = get_business_by_id(session, business_id)
+        source_summaries = get_current_month_source_summaries(session, business_id)
+        source_totals = {source: data["total_cost"] for source, data in source_summaries.items()}
+        summary_card_bytes = generate_summary_card(
+            business_name=current_business.name,
+            month_label=f"{month_name(today.month, language)} {today.year}",
+            total_cost=budget_info["spent"],
+            source_totals=source_totals,
+            language=language,
+        )
+        st.download_button(
+            t("download_summary_card_button", language),
+            data=summary_card_bytes,
+            file_name="energy_summary_card.png",
+            mime="image/png",
+        )
+    else:
+        st.caption(t("summary_card_unavailable_arabic", language))
 
     st.subheader(t("edit_delete_header", language))
 

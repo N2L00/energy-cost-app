@@ -253,6 +253,7 @@ EN = {
     "card_total_label": "Total This Month",
     "card_by_source_label": "This Month by Source",
     "card_footer_note": "Energy Cost Tracker",
+    "summary_card_unavailable_arabic": "Summary card image is not yet available in Arabic.",
 }
 
 FR = {
@@ -485,6 +486,7 @@ FR = {
     "card_total_label": "Total ce mois-ci",
     "card_by_source_label": "Ce mois-ci par source",
     "card_footer_note": "Suivi des coûts énergétiques",
+    "summary_card_unavailable_arabic": "L'image de la carte résumé n'est pas encore disponible en arabe.",
 }
 
 AR = {
@@ -711,6 +713,7 @@ AR = {
     "card_total_label": "الإجمالي هذا الشهر",
     "card_by_source_label": "هذا الشهر حسب المصدر",
     "card_footer_note": "متتبع تكاليف الطاقة",
+    "summary_card_unavailable_arabic": "صورة بطاقة الملخص غير متوفرة بعد باللغة العربية.",
 }
 
 MONTH_NAMES = {
