@@ -201,6 +201,17 @@ def update_budget_threshold(session: Session, business_id: int, new_threshold: f
     return business
 
 
+@handle_db_errors(fallback=None)
+def update_generator_capacity(session: Session, business_id: int, new_capacity_kva: float | None) -> Business | None:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return None
+    business.generator_capacity_kva = new_capacity_kva
+    session.commit()
+    session.refresh(business)
+    return business
+
+
 @handle_db_errors(fallback="en")
 def get_business_language(session: Session, business_id: int) -> str:
     business = get_business_by_id(session, business_id)
@@ -376,6 +387,55 @@ def calculate_solar_payback(session: Session, business_id: int, upfront_cost: fl
         "possible": True,
         "monthly_savings": round(monthly_savings, 2),
         "months_to_payback": round(months_to_payback, 1),
+    }
+
+
+# Typical specific fuel consumption of a small diesel generator running at a
+# moderate, steady load: liters of diesel burned per kWh of electricity produced.
+GENERATOR_SPECIFIC_FUEL_CONSUMPTION_L_PER_KWH = 0.25
+
+# Conversion factor from a generator's nameplate rating in kVA (apparent power)
+# to the real power in kW it can actually deliver.
+GENERATOR_POWER_FACTOR = 0.8
+
+
+@handle_db_errors(fallback={"possible": False})
+def get_generator_load_estimate(session: Session, business_id: int) -> dict:
+    business = get_business_by_id(session, business_id)
+    if business is None or not business.generator_capacity_kva or business.generator_capacity_kva <= 0:
+        return {"possible": False}
+
+    entries = (
+        session.query(EnergyEntry)
+        .filter(
+            EnergyEntry.business_id == business_id,
+            EnergyEntry.source == EnergySource.GENERATOR,
+            EnergyEntry.diesel_liters.isnot(None),
+            EnergyEntry.hours_run.isnot(None),
+            EnergyEntry.hours_run > 0,
+        )
+        .all()
+    )
+
+    if len(entries) < 3:
+        return {"possible": False}
+
+    total_diesel_liters = sum(e.diesel_liters for e in entries)
+    total_hours_run = sum(e.hours_run for e in entries)
+    avg_liters_per_hour = total_diesel_liters / total_hours_run
+
+    estimated_kw = avg_liters_per_hour / GENERATOR_SPECIFIC_FUEL_CONSUMPTION_L_PER_KWH
+    rated_kw = business.generator_capacity_kva * GENERATOR_POWER_FACTOR
+
+    if rated_kw <= 0:
+        return {"possible": False}
+
+    return {
+        "possible": True,
+        "avg_liters_per_hour": round(avg_liters_per_hour, 2),
+        "estimated_kw": round(estimated_kw, 2),
+        "rated_kw": round(rated_kw, 2),
+        "load_percentage": round((estimated_kw / rated_kw) * 100, 1),
     }
 
 

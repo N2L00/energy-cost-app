@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_all_businesses, create_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business, get_outage_schedule, set_outage_schedule, get_business_language, update_business_language
+from crud import get_all_businesses, create_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business, get_outage_schedule, set_outage_schedule, get_business_language, update_business_language, update_generator_capacity
 from translations import t, LANGUAGE_NAMES
 
 session = SessionLocal()
@@ -82,6 +82,24 @@ with st.expander(t("outage_schedule_expander", language)):
     if st.button(t("update_schedule_button", language)):
         set_outage_schedule(session, current_business.id, new_hours)
         st.success(t("schedule_updated_success", language))
+        st.rerun()
+
+with st.expander(t("generator_capacity_expander", language)):
+    st.write(t("generator_capacity_description", language))
+    current_capacity = current_business.generator_capacity_kva
+    st.write(
+        t("current_generator_capacity_text", language, capacity=f"{current_capacity:,.1f}") if current_capacity
+        else t("no_generator_capacity_set", language)
+    )
+    new_capacity = st.number_input(
+        t("set_generator_capacity_label", language),
+        min_value=0.0,
+        value=float(current_capacity) if current_capacity else 0.0,
+        step=1.0,
+    )
+    if st.button(t("update_generator_capacity_button", language)):
+        update_generator_capacity(session, current_business.id, new_capacity if new_capacity > 0 else None)
+        st.success(t("generator_capacity_updated_success", language))
         st.rerun()
 
 with st.expander(t("language_expander", language)):

@@ -89,6 +89,15 @@ EN = {
     "language_select_label": "Display language",
     "update_language_button": "Update Language",
     "language_updated_success": "Language updated!",
+    "generator_capacity_expander": "⚙️ Generator Capacity",
+    "generator_capacity_description": (
+        "Set your generator's rated capacity to enable load analysis in recommendations."
+    ),
+    "current_generator_capacity_text": "Current capacity: {capacity} kVA",
+    "no_generator_capacity_set": "No generator capacity set.",
+    "set_generator_capacity_label": "Generator capacity (kVA)",
+    "update_generator_capacity_button": "Update Generator Capacity",
+    "generator_capacity_updated_success": "Generator capacity updated!",
     "currently_working_with": "Currently working with: **{name}**",
     "use_sidebar_hint": "Use the sidebar to log a new entry or view your dashboard.",
 
@@ -316,6 +325,16 @@ FR = {
     "language_select_label": "Langue d'affichage",
     "update_language_button": "Mettre à jour la langue",
     "language_updated_success": "Langue mise à jour !",
+    "generator_capacity_expander": "⚙️ Capacité du générateur",
+    "generator_capacity_description": (
+        "Définissez la capacité nominale de votre générateur pour activer l'analyse de "
+        "charge dans les recommandations."
+    ),
+    "current_generator_capacity_text": "Capacité actuelle : {capacity} kVA",
+    "no_generator_capacity_set": "Aucune capacité de générateur définie.",
+    "set_generator_capacity_label": "Capacité du générateur (kVA)",
+    "update_generator_capacity_button": "Mettre à jour la capacité",
+    "generator_capacity_updated_success": "Capacité du générateur mise à jour !",
     "currently_working_with": "Entreprise actuelle : **{name}**",
     "use_sidebar_hint": "Utilisez la barre latérale pour enregistrer une nouvelle entrée ou consulter votre tableau de bord.",
 
@@ -538,6 +557,13 @@ AR = {
     "language_select_label": "لغة العرض",
     "update_language_button": "تحديث اللغة",
     "language_updated_success": "تم تحديث اللغة!",
+    "generator_capacity_expander": "⚙️ سعة المولد",
+    "generator_capacity_description": "حدّد السعة الاسمية لمولدك لتفعيل تحليل الحمل في التوصيات.",
+    "current_generator_capacity_text": "السعة الحالية: {capacity} كيلوفولت أمبير",
+    "no_generator_capacity_set": "لم يتم تحديد سعة المولد.",
+    "set_generator_capacity_label": "سعة المولد (كيلوفولت أمبير)",
+    "update_generator_capacity_button": "تحديث سعة المولد",
+    "generator_capacity_updated_success": "تم تحديث سعة المولد!",
     "currently_working_with": "تعمل حالياً مع: **{name}**",
     "use_sidebar_hint": "استخدم الشريط الجانبي لتسجيل إدخال جديد أو عرض لوحة التحكم الخاصة بك.",
 
