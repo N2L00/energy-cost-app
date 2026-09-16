@@ -1,4 +1,3 @@
-
 # Energy Cost Tracker
 
 A manual energy-cost tracking tool for small businesses in Lebanon, where power comes from three unreliable, differently-priced sources: the public grid, diesel generators, and increasingly solar. Built solo, end to end — schema to cloud deployment.
@@ -50,12 +49,35 @@ Lebanon's chronic grid shortages mean small business owners juggle three power s
 
 ## Setup
 
-```bash
 git clone <this-repo>
 cd energy-cost-app
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-```
 
 Create a `.env` file with:
+
+ANTHROPIC_API_KEY=your_key_here
+#DATABASE_URL=your_postgres_connection_string
+
+(Leave `DATABASE_URL` commented out for local development — the app defaults to SQLite. Uncomment it, pointing at a Postgres/Neon connection string, for production.)
+
+Initialize the database:
+
+python init_db.py
+
+Run the app:
+
+streamlit run app.py
+
+## Known Limitations
+
+- **No real multi-user authentication** — the current multi-business feature is a shared switcher, not private per-user accounts.
+- **No automated reminders** — Streamlit Community Cloud has no way to run scheduled background jobs independent of someone visiting the app; this needs real backend infrastructure, planned for a v2 rebuild.
+- **Arabic summary card images are disabled** — the current font doesn't support Arabic glyphs; proper support needs an Arabic-capable font plus text-shaping/bidi libraries.
+- **CSV and PDF exports remain English-only by design**, since column data and printed reports are equally usable across languages.
+- **Bill photo scanning, WhatsApp-based logging, and peer benchmarking** were considered and deliberately not pursued — narrow value relative to engineering cost, too large a scope shift, or not viable without a real multi-business user base, respectively.
+
+## What's Next
+
+A v2 rebuild (React + FastAPI) is planned, with real multi-user authentication designed in from the start and a proper backend capable of scheduled reminders — rather than retrofitting either into the current architecture.
