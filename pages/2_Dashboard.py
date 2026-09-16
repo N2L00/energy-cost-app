@@ -1,10 +1,13 @@
 import streamlit as st
 import pandas as pd
+from datetime import date
+
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary, get_business_language
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary, get_business_language, get_current_month_source_summaries, get_business_by_id
 from models import EnergySource, Currency
 from reports import generate_entries_pdf
-from translations import t
+from summary_card import generate_summary_card
+from translations import t, month_name
 
 session = SessionLocal()
 
@@ -123,6 +126,24 @@ else:
         data=generate_entries_pdf(df),
         file_name="energy_report.pdf",
         mime="application/pdf",
+    )
+
+    today = date.today()
+    current_business = get_business_by_id(session, business_id)
+    source_summaries = get_current_month_source_summaries(session, business_id)
+    source_totals = {source: data["total_cost"] for source, data in source_summaries.items()}
+    summary_card_bytes = generate_summary_card(
+        business_name=current_business.name,
+        month_label=f"{month_name(today.month, language)} {today.year}",
+        total_cost=budget_info["spent"],
+        source_totals=source_totals,
+        language=language,
+    )
+    st.download_button(
+        t("download_summary_card_button", language),
+        data=summary_card_bytes,
+        file_name="energy_summary_card.png",
+        mime="image/png",
     )
 
     st.subheader(t("edit_delete_header", language))

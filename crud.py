@@ -149,6 +149,17 @@ def get_all_source_summaries(session: Session, business_id: int) -> dict:
     }
 
 
+def get_current_month_source_summaries(session: Session, business_id: int) -> dict:
+    today = date_type.today()
+    month_start = today.replace(day=1)
+    return {
+        source.value: get_cost_summary(
+            session, business_id, source=source.value, start_date=month_start, end_date=today
+        )
+        for source in EnergySource
+    }
+
+
 @handle_db_errors(fallback=None)
 def create_business(session: Session, name: str) -> Business:
     business = Business(name=name)

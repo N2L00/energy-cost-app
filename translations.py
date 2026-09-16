@@ -237,6 +237,13 @@ EN = {
     "grid_shift_savings_metric": "From shifting grid to solar",
     "total_projected_savings_metric": "Total Projected Monthly Savings",
     "amount_per_month_value": "${amount}/mo",
+
+    # Summary card (Dashboard)
+    "download_summary_card_button": "Download Summary Card",
+    "card_header_label": "Energy Cost Summary",
+    "card_total_label": "Total This Month",
+    "card_by_source_label": "This Month by Source",
+    "card_footer_note": "Energy Cost Tracker",
 }
 
 FR = {
@@ -453,6 +460,12 @@ FR = {
     "grid_shift_savings_metric": "Grâce au transfert du réseau vers le solaire",
     "total_projected_savings_metric": "Total des économies mensuelles projetées",
     "amount_per_month_value": "${amount}/mois",
+
+    "download_summary_card_button": "Télécharger la carte résumé",
+    "card_header_label": "Résumé des coûts énergétiques",
+    "card_total_label": "Total ce mois-ci",
+    "card_by_source_label": "Ce mois-ci par source",
+    "card_footer_note": "Suivi des coûts énergétiques",
 }
 
 AR = {
@@ -666,7 +679,36 @@ AR = {
     "grid_shift_savings_metric": "من النقل من الشبكة إلى الطاقة الشمسية",
     "total_projected_savings_metric": "إجمالي التوفير الشهري المتوقع",
     "amount_per_month_value": "${amount}/شهرياً",
+
+    "download_summary_card_button": "تنزيل بطاقة الملخص",
+    "card_header_label": "ملخص تكاليف الطاقة",
+    "card_total_label": "الإجمالي هذا الشهر",
+    "card_by_source_label": "هذا الشهر حسب المصدر",
+    "card_footer_note": "متتبع تكاليف الطاقة",
 }
+
+MONTH_NAMES = {
+    "en": [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ],
+    "fr": [
+        "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+        "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+    ],
+    # Levantine month names, as commonly used in Lebanon (rather than the
+    # transliterated Gregorian names used elsewhere in the Arab world).
+    "ar": [
+        "كانون الثاني", "شباط", "آذار", "نيسان", "أيار", "حزيران",
+        "تموز", "آب", "أيلول", "تشرين الأول", "تشرين الثاني", "كانون الأول",
+    ],
+}
+
+
+def month_name(month: int, language: str = "en") -> str:
+    names = MONTH_NAMES.get(language, MONTH_NAMES["en"])
+    return names[month - 1]
+
 
 TRANSLATIONS = {"en": EN, "fr": FR, "ar": AR}
 
