@@ -31,23 +31,46 @@ cost = st.number_input(t("cost_label", language), min_value=0.0, step=0.5)
 units_kwh = None
 diesel_liters = None
 hours_run = None
-
-if source in ("grid", "solar"):
-    units_kwh = st.number_input(t("units_kwh_label", language), min_value=0.0, step=1.0)
-
-if source == "generator":
-    diesel_liters = st.number_input(t("diesel_liters_label", language), min_value=0.0, step=1.0)
-    hours_run = st.number_input(t("hours_run_label", language), min_value=0.0, step=0.5)
-
 time_of_day = None
-if source in ("grid", "generator"):
-    time_of_day = st.selectbox(
-        t("time_of_day_label", language),
-        options=["morning", "afternoon", "evening_night"],
-        format_func=lambda tod: t(f"time_of_day_{tod}", language),
-    )
+notes = None
 
-notes = st.text_area(t("notes_label", language))
+with st.expander(t("more_details_expander", language)):
+    if source in ("grid", "solar"):
+        units_kwh = st.number_input(
+            t("units_kwh_label", language),
+            min_value=0.0,
+            step=1.0,
+            value=None,
+            placeholder=t("optional_placeholder", language),
+        )
+
+    if source == "generator":
+        diesel_liters = st.number_input(
+            t("diesel_liters_label", language),
+            min_value=0.0,
+            step=1.0,
+            value=None,
+            placeholder=t("optional_placeholder", language),
+        )
+        hours_run = st.number_input(
+            t("hours_run_label", language),
+            min_value=0.0,
+            step=0.5,
+            value=None,
+            placeholder=t("optional_placeholder", language),
+        )
+
+    if source in ("grid", "generator"):
+        time_of_day = st.selectbox(
+            t("time_of_day_label", language),
+            options=["morning", "afternoon", "evening_night"],
+            format_func=lambda tod: t(f"time_of_day_{tod}", language),
+            index=None,
+            placeholder=t("optional_placeholder", language),
+        )
+
+    notes_input = st.text_area(t("notes_label", language))
+    notes = notes_input if notes_input else None
 
 if st.button(t("save_entry_button", language)):
     create_energy_entry(
@@ -60,7 +83,7 @@ if st.button(t("save_entry_button", language)):
         units_kwh=units_kwh,
         diesel_liters=diesel_liters,
         hours_run=hours_run,
-        notes=notes if notes else None,
+        notes=notes,
         time_of_day=time_of_day,
     )
     st.success(t("entry_saved_success", language))

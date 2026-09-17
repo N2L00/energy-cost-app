@@ -105,6 +105,8 @@ EN = {
     # 1_Log_Entry.py
     "log_entry_title": "📝 Log Energy Entry",
     "save_entry_button": "Save Entry",
+    "more_details_expander": "📋 More details (optional)",
+    "optional_placeholder": "Optional",
     "entry_saved_success": "Entry saved!",
     "import_csv_header": "Import Entries from CSV",
     "import_csv_caption": (
@@ -343,6 +345,8 @@ FR = {
 
     "log_entry_title": "📝 Enregistrer une entrée d'énergie",
     "save_entry_button": "Enregistrer l'entrée",
+    "more_details_expander": "📋 Plus de détails (facultatif)",
+    "optional_placeholder": "Facultatif",
     "entry_saved_success": "Entrée enregistrée !",
     "import_csv_header": "Importer des entrées depuis un CSV",
     "import_csv_caption": (
@@ -574,6 +578,8 @@ AR = {
 
     "log_entry_title": "📝 تسجيل إدخال طاقة",
     "save_entry_button": "حفظ الإدخال",
+    "more_details_expander": "📋 مزيد من التفاصيل (اختياري)",
+    "optional_placeholder": "اختياري",
     "entry_saved_success": "تم حفظ الإدخال!",
     "import_csv_header": "استيراد الإدخالات من ملف CSV",
     "import_csv_caption": (

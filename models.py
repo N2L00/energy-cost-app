@@ -34,6 +34,7 @@ class Business(Base):
     outages: Mapped[list["Outage"]] = relationship(cascade="all, delete-orphan")
     recommendations: Mapped[list["Recommendation"]] = relationship(cascade="all, delete-orphan")
     outage_schedules: Mapped[list["OutageSchedule"]] = relationship(cascade="all, delete-orphan")
+    dashboard_views: Mapped[list["DashboardView"]] = relationship(cascade="all, delete-orphan")
 
 
 class EnergyEntry(Base):
@@ -86,3 +87,13 @@ class OutageSchedule(Base):
     active: Mapped[bool] = mapped_column(default=True)
 
     business: Mapped["Business"] = relationship(overlaps="outage_schedules")
+
+
+class DashboardView(Base):
+    __tablename__ = "dashboard_views"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
+    viewed_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    business: Mapped["Business"] = relationship(overlaps="dashboard_views")

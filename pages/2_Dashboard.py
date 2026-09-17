@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date
 
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary, get_business_language, get_current_month_source_summaries, get_business_by_id
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary, get_business_language, get_current_month_source_summaries, get_business_by_id, log_dashboard_view
 from models import EnergySource, Currency
 from reports import generate_entries_pdf
 from summary_card import generate_summary_card
@@ -16,6 +16,10 @@ if "active_business_id" not in st.session_state:
     st.stop()
 
 business_id = st.session_state.active_business_id
+view_logged_key = f"dashboard_view_logged_{business_id}"
+if view_logged_key not in st.session_state:
+    log_dashboard_view(session, business_id)
+    st.session_state[view_logged_key] = True
 language = get_business_language(session, business_id)
 
 st.title(t("dashboard_title", language))

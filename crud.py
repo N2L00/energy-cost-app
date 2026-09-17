@@ -4,7 +4,7 @@ from datetime import date as date_type
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import Business, EnergyEntry, EnergySource, Currency, Outage, Recommendation, OutageSchedule
+from models import Business, EnergyEntry, EnergySource, Currency, Outage, Recommendation, OutageSchedule, DashboardView
 
 
 def handle_db_errors(fallback):
@@ -662,3 +662,11 @@ def delete_business(session: Session, business_id: int) -> bool:
     session.delete(business)
     session.commit()
     return True
+
+@handle_db_errors(fallback=None)
+def log_dashboard_view(session: Session, business_id: int) -> DashboardView | None:
+    view = DashboardView(business_id=business_id)
+    session.add(view)
+    session.commit()
+    session.refresh(view)
+    return view
