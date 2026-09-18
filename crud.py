@@ -27,7 +27,7 @@ def to_usd(cost: float, currency: Currency, exchange_rate: float) -> float:
 
 @handle_db_errors(fallback=None)
 def get_or_create_default_business(session: Session) -> Business:
-    business = session.query(Business).first()
+    business = session.query(Business).order_by(Business.id.desc()).first()
     if business is None:
         business = Business(name="My Business")
         session.add(business)
