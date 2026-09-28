@@ -212,6 +212,25 @@ def update_generator_capacity(session: Session, business_id: int, new_capacity_k
     return business
 
 
+@handle_db_errors(fallback=None)
+def update_last_generator_service(session: Session, business_id: int, service_date: date_type | None) -> Business | None:
+    business = get_business_by_id(session, business_id)
+    if business is None:
+        return None
+    business.last_generator_service = service_date
+    session.commit()
+    session.refresh(business)
+    return business
+
+
+@handle_db_errors(fallback=None)
+def get_days_since_last_service(session: Session, business_id: int) -> int | None:
+    business = get_business_by_id(session, business_id)
+    if business is None or business.last_generator_service is None:
+        return None
+    return (date_type.today() - business.last_generator_service).days
+
+
 @handle_db_errors(fallback="en")
 def get_business_language(session: Session, business_id: int) -> str:
     business = get_business_by_id(session, business_id)

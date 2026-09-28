@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date
 
 from database import SessionLocal
-from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary, get_business_language, get_current_month_source_summaries, get_business_by_id, log_dashboard_view
+from crud import get_entries_dataframe, update_energy_entry, delete_energy_entry, get_cost_per_unit, get_outages_dataframe, get_total_outage_hours, get_current_month_spending, get_baseline_comparison, get_current_month_outage_summary, get_business_language, get_current_month_source_summaries, get_business_by_id, log_dashboard_view, get_days_since_last_service
 from models import EnergySource, Currency
 from reports import generate_entries_pdf
 from summary_card import generate_summary_card
@@ -78,6 +78,12 @@ else:
             col.metric(label, f"${data['value']:.3f}")
         else:
             col.metric(label, t("no_data_label", language))
+
+    days_since_service = get_days_since_last_service(session, business_id)
+    st.write(
+        t("days_since_last_service_text", language, days=days_since_service) if days_since_service is not None
+        else t("no_service_logged", language)
+    )
 
     st.subheader(t("grid_rate_header", language))
     baseline = get_baseline_comparison(session, business_id)

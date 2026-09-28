@@ -1,7 +1,7 @@
 import streamlit as st
 
 from database import SessionLocal
-from crud import get_all_businesses, create_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business, get_outage_schedule, set_outage_schedule, get_business_language, update_business_language, update_generator_capacity
+from crud import get_all_businesses, create_business, get_business_by_id, update_exchange_rate, update_budget_threshold, delete_business, get_outage_schedule, set_outage_schedule, get_business_language, update_business_language, update_generator_capacity, update_last_generator_service
 from translations import t, LANGUAGE_NAMES
 
 session = SessionLocal()
@@ -110,6 +110,18 @@ with st.expander(t("settings_expander", language)):
         if st.button(t("update_generator_capacity_button", language)):
             update_generator_capacity(session, current_business.id, new_capacity if new_capacity > 0 else None)
             st.success(t("generator_capacity_updated_success", language))
+            st.rerun()
+
+        current_service_date = current_business.last_generator_service
+        if current_service_date is None:
+            st.write(t("no_service_logged", language))
+        new_service_date = st.date_input(
+            t("last_service_label", language),
+            value=current_service_date,
+        )
+        if st.button(t("update_last_service_button", language)):
+            update_last_generator_service(session, current_business.id, new_service_date)
+            st.success(t("last_service_updated_success", language))
             st.rerun()
 
     with tab_language:

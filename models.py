@@ -29,6 +29,7 @@ class Business(Base):
     budget_threshold: Mapped[Optional[float]] = mapped_column(default=None)
     language: Mapped[Optional[str]] = mapped_column(default="en")
     generator_capacity_kva: Mapped[Optional[float]] = mapped_column(default=None)
+    last_generator_service: Mapped[Optional[date]] = mapped_column(default=None)
 
     entries: Mapped[list["EnergyEntry"]] = relationship(back_populates="business", cascade="all, delete-orphan")
     outages: Mapped[list["Outage"]] = relationship(cascade="all, delete-orphan")
