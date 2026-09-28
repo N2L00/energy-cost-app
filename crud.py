@@ -214,6 +214,8 @@ def update_generator_capacity(session: Session, business_id: int, new_capacity_k
 
 @handle_db_errors(fallback=None)
 def update_last_generator_service(session: Session, business_id: int, service_date: date_type | None) -> Business | None:
+    if service_date is not None and service_date > date_type.today():
+        raise ValueError("last_generator_service cannot be in the future")
     business = get_business_by_id(session, business_id)
     if business is None:
         return None

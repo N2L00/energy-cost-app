@@ -1,3 +1,5 @@
+from datetime import date
+
 import streamlit as st
 
 from database import SessionLocal
@@ -118,6 +120,7 @@ with st.expander(t("settings_expander", language)):
         new_service_date = st.date_input(
             t("last_service_label", language),
             value=current_service_date,
+            max_value=date.today(),
         )
         if st.button(t("update_last_service_button", language)):
             update_last_generator_service(session, current_business.id, new_service_date)
