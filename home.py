@@ -115,6 +115,10 @@ with st.expander(t("settings_expander", language)):
             st.rerun()
 
         current_service_date = current_business.last_generator_service
+        # Render-time guard only: a future date (bad data, manual edit) would crash
+        # st.date_input against max_value, so show it as unset. Nothing is saved here.
+        if current_service_date is not None and current_service_date > date.today():
+            current_service_date = None
         if current_service_date is None:
             st.write(t("no_service_logged", language))
         new_service_date = st.date_input(
